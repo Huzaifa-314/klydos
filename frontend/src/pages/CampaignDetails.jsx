@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CampaignCard from '../components/CampaignCard';
+import api from '../services/api';
 
 const CampaignDetails = () => {
   const { id } = useParams();
@@ -28,109 +29,54 @@ const CampaignDetails = () => {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // TODO: Replace with actual API call when Campaign Service is available
-  // API Endpoint (Future): GET /api/campaigns/:id
   useEffect(() => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // Mock campaign data - Replace with: api.campaigns.getById(id)
-      const mockCampaign = {
-        id: parseInt(id),
-        title: 'Help Build a School in Rural Area',
-        description: 'Support education for underprivileged children by helping us build a school in a remote village.',
-        long_description: `In a small rural village, hundreds of children walk miles every day to reach the nearest school. Many drop out due to the long distance, while others cannot afford the transportation costs. This campaign aims to build a local school that will serve over 300 children, providing them with quality education right in their community.
+    const fetchCampaign = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch campaign details
+        const campaignData = await api.campaigns.getById(id);
+        
+        // Transform API response to match component expectations
+        const campaign = {
+          ...campaignData,
+          // Use campaign_summary data if available
+          total_raised: campaignData.campaign_summary?.total_raised || 0,
+          total_donors: campaignData.campaign_summary?.total_donors || 0,
+          // Use description as long_description if long_description not provided
+          long_description: campaignData.long_description || campaignData.description || '',
+        };
+        
+        setCampaign(campaign);
+        
+        // Fetch related campaigns (same status, exclude current campaign)
+        try {
+          const related = await api.campaigns.list({ 
+            status: campaign.status || 'active',
+            limit: 4 
+          });
+          // Filter out current campaign and limit to 3
+          const filteredRelated = (related || [])
+            .filter(c => c.id !== campaign.id)
+            .slice(0, 3);
+          setRelatedCampaigns(filteredRelated);
+        } catch (err) {
+          console.error('Failed to fetch related campaigns:', err);
+          setRelatedCampaigns([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch campaign:', err);
+        setError('Campaign not found');
+        toast.error('Failed to load campaign details');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-The school will include:
-- 8 classrooms equipped with modern teaching aids
-- A library with books and learning materials
-- A playground for physical activities
-- Clean drinking water and sanitation facilities
-- Computer lab to bridge the digital divide
-
-Your contribution will directly impact these children's futures, giving them the education they deserve and breaking the cycle of poverty in their families. Together, we can build not just a school, but a brighter future for generations to come.`,
-        target_amount: 50000,
-        total_raised: 32000,
-        total_donors: 145,
-        photos: [
-          // Mock image URLs - replace with actual photo URLs from API
-          'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800',
-          'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800',
-          'https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=800',
-        ],
-        category: 'Education',
-        featured: true,
-        start_date: '2024-01-15',
-        end_date: '2024-12-31',
-        location: 'Rural Village, District XYZ',
-        organizer: 'Education Foundation',
-        updates: [
-          {
-            id: 1,
-            title: 'Foundation Laid Successfully!',
-            content: 'We have successfully laid the foundation of the school building. The construction is progressing well and we expect to complete the structure by next month.',
-            date: '2024-11-15',
-            author: 'Education Foundation',
-          },
-          {
-            id: 2,
-            title: 'Reached 50% of Goal!',
-            content: 'Thanks to all generous donors, we have reached 50% of our fundraising goal. Your continued support is making a real difference!',
-            date: '2024-11-10',
-            author: 'Education Foundation',
-          },
-        ],
-        contributors: [
-          { id: 1, name: 'Ayesha Khan', amount: 100, date: '2024-11-20T10:30:00Z', anonymous: false },
-          { id: 2, name: 'Anonymous', amount: 50, date: '2024-11-20T09:15:00Z', anonymous: true },
-          { id: 3, name: 'Mohammed Ali', amount: 200, date: '2024-11-19T16:45:00Z', anonymous: false },
-          { id: 4, name: 'Fatima Ahmed', amount: 75, date: '2024-11-19T14:20:00Z', anonymous: false },
-          { id: 5, name: 'Anonymous', amount: 150, date: '2024-11-19T11:00:00Z', anonymous: true },
-          { id: 6, name: 'Hassan Raza', amount: 300, date: '2024-11-18T18:30:00Z', anonymous: false },
-        ],
-      };
-
-      // Mock related campaigns - Replace with: api.campaigns.list({ category, limit: 4 })
-      const mockRelated = [
-        {
-          id: 2,
-          title: 'Emergency Medical Fund for Cancer Treatment',
-          description: 'Help save lives by supporting cancer treatment for patients who cannot afford it.',
-          target_amount: 75000,
-          total_raised: 45000,
-          total_donors: 289,
-          photos: [],
-          category: 'Medical',
-          featured: true,
-        },
-        {
-          id: 6,
-          title: 'Scholarship Program for Deserving Students',
-          description: 'Help bright students continue their education with scholarships for higher studies.',
-          target_amount: 60000,
-          total_raised: 38000,
-          total_donors: 203,
-          photos: [],
-          category: 'Education',
-          featured: false,
-        },
-        {
-          id: 5,
-          title: 'Clean Water Initiative',
-          description: 'Bring clean drinking water to communities that lack access to safe water sources.',
-          target_amount: 40000,
-          total_raised: 22000,
-          total_donors: 167,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-        },
-      ];
-
-      setCampaign(mockCampaign);
-      setRelatedCampaigns(mockRelated);
-      setLoading(false);
-    }, 100);
+    if (id) {
+      fetchCampaign();
+    }
   }, [id]);
 
   const formatDate = (dateString) => {
@@ -217,8 +163,10 @@ Your contribution will directly impact these children's futures, giving them the
     );
   }
 
-  const progress = campaign.total_raised > 0 
-    ? Math.min((campaign.total_raised / campaign.target_amount) * 100, 100) 
+  const totalRaised = parseFloat(campaign.total_raised || 0);
+  const targetAmount = parseFloat(campaign.target_amount || 0);
+  const progress = totalRaised > 0 && targetAmount > 0
+    ? Math.min((totalRaised / targetAmount) * 100, 100) 
     : 0;
 
   const daysLeft = calculateDaysLeft(campaign.end_date);
@@ -464,7 +412,7 @@ Your contribution will directly impact these children's futures, giving them the
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Campaign Progress</h2>
                 <div className="mb-6">
                   <div className="text-4xl font-bold text-gray-900 mb-2">
-                    ${campaign.total_raised.toLocaleString()}
+                    ${totalRaised.toLocaleString()}
                   </div>
                   <div className="text-gray-600 mb-4">
                     raised of ${campaign.target_amount.toLocaleString()} goal

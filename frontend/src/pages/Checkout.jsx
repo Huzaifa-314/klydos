@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 const Checkout = () => {
   const { id } = useParams();
@@ -23,26 +24,33 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // TODO: Replace with actual API call when Campaign Service is available
-  // API Endpoint (Future): GET /api/campaigns/:id
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      // Mock campaign data - Replace with: api.campaigns.getById(id)
-      const mockCampaign = {
-        id: parseInt(id) || 1,
-        title: 'Help Build a School in Rural Area',
-        description: 'Support education for underprivileged children by helping us build a school in a remote village.',
-        target_amount: 50000,
-        total_raised: 32000,
-        total_donors: 145,
-        photos: ['https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800'],
-        end_date: '2024-12-31',
-      };
-      setCampaign(mockCampaign);
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    const fetchCampaign = async () => {
+      try {
+        setLoading(true);
+        const campaignData = await api.campaigns.getById(id);
+        
+        // Transform API response
+        const campaign = {
+          ...campaignData,
+          total_raised: campaignData.campaign_summary?.total_raised || 0,
+          total_donors: campaignData.campaign_summary?.total_donors || 0,
+        };
+        
+        setCampaign(campaign);
+      } catch (error) {
+        console.error('Failed to fetch campaign:', error);
+        toast.error('Failed to load campaign details');
+        navigate('/campaigns');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchCampaign();
+    }
+  }, [id, navigate]);
 
   // Pre-fill user info if logged in
   useEffect(() => {
@@ -194,8 +202,10 @@ const Checkout = () => {
     );
   }
 
-  const progress = campaign.total_raised > 0 
-    ? Math.min((campaign.total_raised / campaign.target_amount) * 100, 100) 
+  const totalRaised = parseFloat(campaign.total_raised || 0);
+  const targetAmount = parseFloat(campaign.target_amount || 0);
+  const progress = totalRaised > 0 && targetAmount > 0
+    ? Math.min((totalRaised / targetAmount) * 100, 100) 
     : 0;
 
   const daysLeft = calculateDaysLeft(campaign.end_date);
@@ -241,10 +251,10 @@ const Checkout = () => {
                   <div className="mb-3">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="font-semibold text-gray-900">
-                        ${campaign.total_raised.toLocaleString()}
+                        ${totalRaised.toLocaleString()}
                       </span>
                       <span className="text-gray-600">
-                        of ${campaign.target_amount.toLocaleString()}
+                        of ${targetAmount.toLocaleString()}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">

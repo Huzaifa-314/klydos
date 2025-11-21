@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CreateEditCampaign = () => {
   const { id } = useParams();
@@ -25,24 +26,32 @@ const CreateEditCampaign = () => {
   const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
-    if (isEditMode) {
-      // TODO: Replace with actual API call: GET /api/campaigns/:id
-      setTimeout(() => {
-        setFormData({
-          title: 'Help Build a School in Rural Area',
-          description: 'Support education for underprivileged children',
-          long_description: 'Full description here...',
-          target_amount: '50000',
-          category: 'Education',
-          start_date: '2024-01-15',
-          end_date: '2024-12-31',
-          location: 'Rural Village, District XYZ',
-          photos: [],
-          featured: true,
-        });
-      }, 500);
-    }
-  }, [id, isEditMode]);
+    const fetchCampaign = async () => {
+      if (isEditMode && id) {
+        try {
+          const campaignData = await api.campaigns.getById(id);
+          setFormData({
+            title: campaignData.title || '',
+            description: campaignData.description || '',
+            long_description: campaignData.long_description || campaignData.description || '',
+            target_amount: campaignData.target_amount?.toString() || '',
+            category: campaignData.category || '',
+            start_date: campaignData.start_date ? new Date(campaignData.start_date).toISOString().split('T')[0] : '',
+            end_date: campaignData.end_date ? new Date(campaignData.end_date).toISOString().split('T')[0] : '',
+            location: campaignData.location || '',
+            photos: campaignData.photos || [],
+            featured: campaignData.featured || false,
+          });
+        } catch (error) {
+          console.error('Failed to fetch campaign:', error);
+          toast.error('Failed to load campaign data');
+          navigate('/admin/campaigns');
+        }
+      }
+    };
+
+    fetchCampaign();
+  }, [id, isEditMode, navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -55,14 +64,32 @@ const CreateEditCampaign = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    // TODO: Replace with actual file upload API: POST /api/campaigns/:id/photos
-    toast.success(`${files.length} photo(s) selected`);
-    setFormData({
-      ...formData,
-      photos: [...formData.photos, ...files.map((f) => URL.createObjectURL(f))],
-    });
+    
+    // If editing and campaign has ID, upload photos immediately
+    if (isEditMode && id) {
+      try {
+        await api.campaigns.uploadPhotos(id, files);
+        toast.success(`${files.length} photo(s) uploaded successfully`);
+        // Refresh campaign data to get updated photos
+        const campaignData = await api.campaigns.getById(id);
+        setFormData({
+          ...formData,
+          photos: campaignData.photos || [],
+        });
+      } catch (error) {
+        console.error('Failed to upload photos:', error);
+        toast.error('Failed to upload photos');
+      }
+    } else {
+      // For new campaigns, store files for upload after creation
+      toast.success(`${files.length} photo(s) selected`);
+      setFormData({
+        ...formData,
+        photos: [...formData.photos, ...files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }))],
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -70,17 +97,52 @@ const CreateEditCampaign = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // if (isEditMode) {
-      //   await api.campaigns.update(id, formData);
-      // } else {
-      //   await api.campaigns.create(formData);
-      // }
+      // Prepare campaign data for API
+      const campaignData = {
+        title: formData.title,
+        description: formData.description,
+        long_description: formData.long_description || formData.description,
+        target_amount: parseFloat(formData.target_amount),
+        category: formData.category,
+        start_date: formData.start_date ? new Date(formData.start_date).toISOString() : undefined,
+        end_date: formData.end_date ? new Date(formData.end_date).toISOString() : undefined,
+        location: formData.location || undefined,
+        featured: formData.featured,
+        status: isEditMode ? undefined : 'draft', // New campaigns start as draft
+      };
+
+      let campaignId = id;
       
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (isEditMode) {
+        // Update existing campaign
+        await api.campaigns.update(id, campaignData);
+        campaignId = id;
+      } else {
+        // Create new campaign
+        const newCampaign = await api.campaigns.create(campaignData);
+        campaignId = newCampaign.id;
+        
+        // Upload photos if any were selected
+        if (formData.photos.length > 0) {
+          const photoFiles = formData.photos
+            .filter(p => p.file)
+            .map(p => p.file);
+          
+          if (photoFiles.length > 0) {
+            try {
+              await api.campaigns.uploadPhotos(campaignId, photoFiles);
+            } catch (photoError) {
+              console.error('Failed to upload photos:', photoError);
+              toast.error('Campaign created but photos upload failed');
+            }
+          }
+        }
+      }
+      
       toast.success(`Campaign ${isEditMode ? 'updated' : 'created'} successfully!`);
       navigate('/admin/campaigns');
     } catch (error) {
+      console.error('Failed to save campaign:', error);
       toast.error(error.message || 'Failed to save campaign');
     } finally {
       setIsSubmitting(false);
@@ -274,23 +336,27 @@ const CreateEditCampaign = () => {
               <p className="mt-2 text-sm text-gray-500">Max 10 photos, 5MB each. First photo will be the cover image.</p>
               {formData.photos.length > 0 && (
                 <div className="mt-4 grid grid-cols-4 gap-4">
-                  {formData.photos.map((photo, idx) => (
-                    <div key={idx} className="relative">
-                      <img src={photo} alt={`Preview ${idx + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            photos: formData.photos.filter((_, i) => i !== idx),
-                          });
-                        }}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                  {formData.photos.map((photo, idx) => {
+                    // Handle both URL strings and file objects with preview
+                    const photoUrl = typeof photo === 'string' ? photo : (photo.preview || URL.createObjectURL(photo.file));
+                    return (
+                      <div key={idx} className="relative">
+                        <img src={photoUrl} alt={`Preview ${idx + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              photos: formData.photos.filter((_, i) => i !== idx),
+                            });
+                          }}
+                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

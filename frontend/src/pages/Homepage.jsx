@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CampaignCard from '../components/CampaignCard';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const Homepage = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -14,112 +16,66 @@ const Homepage = () => {
   const [recentDonations, setRecentDonations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // TODO: Replace with actual API calls when Campaign Service is available
-  // API Endpoints (Future):
-  // - GET /api/campaigns - List all campaigns
-  // - GET /api/campaigns?featured=true - Get featured campaigns
-  // - GET /api/stats - Get platform statistics
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      // Mock campaigns data - Replace with: api.campaigns.list({ featured: true })
-      const mockCampaigns = [
-        {
-          id: 1,
-          title: 'Help Build a School in Rural Area',
-          description: 'Support education for underprivileged children by helping us build a school in a remote village.',
-          target_amount: 50000,
-          total_raised: 32000,
-          total_donors: 145,
-          photos: [],
-          category: 'Education',
-          featured: true,
-        },
-        {
-          id: 2,
-          title: 'Emergency Medical Fund for Cancer Treatment',
-          description: 'Help save lives by supporting cancer treatment for patients who cannot afford it.',
-          target_amount: 75000,
-          total_raised: 45000,
-          total_donors: 289,
-          photos: [],
-          category: 'Medical',
-          featured: true,
-        },
-        {
-          id: 3,
-          title: 'Food & Shelter for Homeless Families',
-          description: 'Provide essential food and shelter to homeless families during the winter season.',
-          target_amount: 30000,
-          total_raised: 18500,
-          total_donors: 98,
-          photos: [],
-          category: 'Food & Shelter',
-          featured: true,
-        },
-        {
-          id: 4,
-          title: 'Disaster Relief Fund',
-          description: 'Support communities affected by natural disasters with immediate relief and rebuilding efforts.',
-          target_amount: 100000,
-          total_raised: 67000,
-          total_donors: 456,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-        },
-        {
-          id: 5,
-          title: 'Clean Water Initiative',
-          description: 'Bring clean drinking water to communities that lack access to safe water sources.',
-          target_amount: 40000,
-          total_raised: 22000,
-          total_donors: 167,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-        },
-        {
-          id: 6,
-          title: 'Scholarship Program for Deserving Students',
-          description: 'Help bright students continue their education with scholarships for higher studies.',
-          target_amount: 60000,
-          total_raised: 38000,
-          total_donors: 203,
-          photos: [],
-          category: 'Education',
-          featured: false,
-        },
-      ];
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all campaigns
+        const allCampaigns = await api.campaigns.list({ status: 'active' });
+        setCampaigns(allCampaigns || []);
+        
+        // Fetch featured campaigns
+        const featured = await api.campaigns.list({ featured: true, status: 'active' });
+        setFeaturedCampaigns(featured || []);
+        
+        // Calculate stats from campaigns
+        // Note: Campaign Service returns campaigns with summary data
+        const totalRaised = allCampaigns?.reduce((sum, c) => {
+          return sum + (parseFloat(c.campaign_summary?.total_raised || 0));
+        }, 0) || 0;
+        
+        const totalDonors = allCampaigns?.reduce((sum, c) => {
+          return sum + (parseInt(c.campaign_summary?.total_donors || 0));
+        }, 0) || 0;
+        
+        setStats({
+          totalCampaigns: allCampaigns?.length || 0,
+          totalDonors: totalDonors,
+          totalRaised: totalRaised,
+          activeDonors: Math.floor(totalDonors * 0.1), // Estimate active donors
+        });
 
-      setCampaigns(mockCampaigns);
-      setFeaturedCampaigns(mockCampaigns.filter(c => c.featured));
-      
-      // Calculate stats
-      const totalRaised = mockCampaigns.reduce((sum, c) => sum + (c.total_raised || 0), 0);
-      const totalDonors = mockCampaigns.reduce((sum, c) => sum + (c.total_donors || 0), 0);
-      
-      setStats({
-        totalCampaigns: mockCampaigns.length,
-        totalDonors: totalDonors,
-        totalRaised: totalRaised,
-        activeDonors: Math.floor(totalDonors * 0.1), // Mock active donors
-      });
+        // Mock recent donations (will be replaced when Pledge Service is available)
+        const mockDonations = [
+          { name: 'Ayesha', amount: 20 },
+          { name: 'Rahim', amount: 5 },
+          { name: 'Sara', amount: 50 },
+          { name: 'Mohammed', amount: 100 },
+          { name: 'Fatima', amount: 25 },
+          { name: 'Ali', amount: 15 },
+          { name: 'Hassan', amount: 75 },
+          { name: 'Zainab', amount: 30 },
+        ];
+        setRecentDonations(mockDonations);
+      } catch (error) {
+        console.error('Failed to fetch campaigns:', error);
+        toast.error('Failed to load campaigns. Please try again later.');
+        // Set empty state on error
+        setCampaigns([]);
+        setFeaturedCampaigns([]);
+        setStats({
+          totalCampaigns: 0,
+          totalDonors: 0,
+          totalRaised: 0,
+          activeDonors: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      // Mock recent donations
-      const mockDonations = [
-        { name: 'Ayesha', amount: 20 },
-        { name: 'Rahim', amount: 5 },
-        { name: 'Sara', amount: 50 },
-        { name: 'Mohammed', amount: 100 },
-        { name: 'Fatima', amount: 25 },
-        { name: 'Ali', amount: 15 },
-        { name: 'Hassan', amount: 75 },
-        { name: 'Zainab', amount: 30 },
-      ];
-      setRecentDonations(mockDonations);
-      setLoading(false);
-    }, 1000);
+    fetchData();
   }, []);
 
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0);
@@ -260,16 +216,16 @@ const Homepage = () => {
                           <div className="mb-6">
                             <div className="flex justify-between mb-2">
                               <span className="text-lg font-bold text-gray-900">
-                                ${campaign.total_raised.toLocaleString()}
+                                ${parseFloat(campaign.campaign_summary?.total_raised || campaign.total_raised || 0).toLocaleString()}
                               </span>
                               <span className="text-gray-600">
-                                of ${campaign.target_amount.toLocaleString()}
+                                of ${parseFloat(campaign.target_amount || 0).toLocaleString()}
                               </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-3">
                               <div
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
-                                style={{ width: `${Math.min((campaign.total_raised / campaign.target_amount) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((parseFloat(campaign.campaign_summary?.total_raised || campaign.total_raised || 0) / parseFloat(campaign.target_amount || 1)) * 100, 100)}%` }}
                               />
                             </div>
                           </div>
