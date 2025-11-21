@@ -69,6 +69,13 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        // Check if user has admin role - admins must login via /admin/login
+        if (result.data.user.role === 'admin' || result.data.user.role === 'super_admin') {
+          toast.error('Admins must login via the admin portal');
+          navigate('/admin/login');
+          return;
+        }
+        
         toast.success(`Welcome back, ${result.data.user.name}!`);
         // Navigate to home or previous page
         navigate('/');
