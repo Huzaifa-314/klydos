@@ -20,7 +20,6 @@ const Campaigns = () => {
         setFilteredCampaigns(data || []);
       } catch (error) {
         console.error('Failed to fetch campaigns:', error);
-        toast.error('Failed to load campaigns. Please try again later.');
         setCampaigns([]);
         setFilteredCampaigns([]);
       } finally {

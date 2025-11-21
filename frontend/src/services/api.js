@@ -3,10 +3,36 @@ const API_BASE_URL = 'http://localhost/api';
 // Helper function to handle API responses
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'An error occurred' }));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.error || error.message || errorMessage;
+    } catch (e) {
+      // If response is not JSON, try to get text
+      try {
+        const text = await response.text();
+        errorMessage = text || errorMessage;
+      } catch (e2) {
+        // Keep default error message
+      }
+    }
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    throw error;
   }
-  return response.json();
+  
+  // Handle empty responses (204 No Content)
+  if (response.status === 204) {
+    return null;
+  }
+  
+  try {
+    return await response.json();
+  } catch (e) {
+    // If response is not JSON, return text or empty object
+    const text = await response.text();
+    return text ? { message: text } : {};
+  }
 };
 
 // Get auth token from localStorage
@@ -121,33 +147,65 @@ export const api = {
   campaigns: {
     // List all campaigns (public)
     list: async (params = {}) => {
-      const queryParams = new URLSearchParams();
-      if (params.status) queryParams.append('status', params.status);
-      if (params.featured !== undefined) queryParams.append('featured', params.featured);
-      if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
-      
-      const queryString = queryParams.toString();
-      const url = `${API_BASE_URL}/campaigns${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return handleResponse(response);
+      try {
+        const queryParams = new URLSearchParams();
+        if (params.status) queryParams.append('status', params.status);
+        if (params.featured !== undefined) queryParams.append('featured', params.featured);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        
+        const queryString = queryParams.toString();
+        const url = `${API_BASE_URL}/campaigns${queryString ? `?${queryString}` : ''}`;
+        
+        console.log('[API] Fetching campaigns from:', url);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('[API] Response status:', response.status, response.statusText);
+        
+        const data = await handleResponse(response);
+        console.log('[API] Campaigns data received:', data);
+        
+        // Handle different response formats
+        if (Array.isArray(data)) {
+          return data;
+        } else if (data && Array.isArray(data.campaigns)) {
+          return data.campaigns;
+        } else if (data && data.data && Array.isArray(data.data)) {
+          return data.data;
+        }
+        
+        return data || [];
+      } catch (error) {
+        console.error('[API] Campaigns list error:', error);
+        console.error('[API] Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
+        throw error;
+      }
     },
 
     // Get campaign by ID (public)
     getById: async (id) => {
-      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      return handleResponse(response);
+      try {
+        const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('[API] Get campaign by ID error:', error);
+        throw error;
+      }
     },
 
     // Create campaign (admin only)
@@ -544,4 +602,7 @@ export const api = {
 
 // Export token management functions
 export { getAuthToken, setAuthToken };
+
+// Export api as default for convenience
+export default api;
 
