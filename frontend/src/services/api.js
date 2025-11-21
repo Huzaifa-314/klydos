@@ -32,14 +32,12 @@ const getAuthHeaders = () => {
   };
 };
 
-// Get admin auth headers (includes API key)
+// Get admin auth headers (uses admin token)
 const getAdminAuthHeaders = async () => {
-  const { getAdminToken, getAdminApiKey } = await import('../utils/adminSession');
+  const { getAdminToken } = await import('../utils/adminSession');
   const adminToken = getAdminToken();
-  const adminApiKey = getAdminApiKey();
   return {
     'Content-Type': 'application/json',
-    ...(adminApiKey && { 'X-API-Key': adminApiKey }),
     ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
   };
 };
@@ -160,13 +158,12 @@ export const api = {
 
   // Admin Service Endpoints
   admin: {
-    // Admin Login (email + password + API key)
-    login: async (email, password, apiKey) => {
+    // Admin Login (email + password only)
+    login: async (email, password) => {
       const response = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
         },
         body: JSON.stringify({ email, password }),
       });
@@ -174,43 +171,34 @@ export const api = {
       // Store admin token if provided
       if (data.token) {
         const { setAdminSession } = await import('../utils/adminSession');
-        setAdminSession(data.token, apiKey, 60 * 60 * 1000); // 1 hour session
+        setAdminSession(data.token);
       }
       return data;
     },
 
     // Verify Admin Session
     verifySession: async () => {
-      const { getAdminToken, getAdminApiKey } = await import('../utils/adminSession');
+      const { getAdminToken } = await import('../utils/adminSession');
       const adminToken = getAdminToken();
-      const adminApiKey = getAdminApiKey();
-      if (!adminToken || !adminApiKey) {
+      if (!adminToken) {
         throw new Error('No admin session found');
       }
+      const headers = await getAdminAuthHeaders();
       const response = await fetch(`${API_BASE_URL}/admin/verify-session`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': adminApiKey,
-          Authorization: `Bearer ${adminToken}`,
-        },
+        headers,
       });
       return handleResponse(response);
     },
 
     // Admin Logout
     logout: async () => {
-      const { getAdminToken, getAdminApiKey, clearAdminSession } = await import('../utils/adminSession');
-      const adminToken = getAdminToken();
-      const adminApiKey = getAdminApiKey();
+      const { clearAdminSession } = await import('../utils/adminSession');
       try {
+        const headers = await getAdminAuthHeaders();
         const response = await fetch(`${API_BASE_URL}/admin/logout`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(adminApiKey && { 'X-API-Key': adminApiKey }),
-            ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
-          },
+          headers,
         });
         await handleResponse(response);
       } catch (error) {

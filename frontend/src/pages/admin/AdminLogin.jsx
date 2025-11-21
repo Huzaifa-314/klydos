@@ -9,7 +9,6 @@ const AdminLogin = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    apiKey: '', // Admin API Key
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +39,6 @@ const AdminLogin = () => {
     if (!formData.password) {
       newErrors.password = 'Password is required';
     }
-    if (!formData.apiKey) {
-      newErrors.apiKey = 'API Key is required for admin access';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -58,18 +54,18 @@ const AdminLogin = () => {
     setIsSubmitting(true);
 
     try {
-      // Call admin login API
-      const response = await api.admin.login(formData.email, formData.password, formData.apiKey);
+      // Call admin login API (email + password only)
+      const response = await api.admin.login(formData.email, formData.password);
       
       // Store admin session
       const { setAdminSession } = await import('../../utils/adminSession');
-      setAdminSession(response.token || 'admin-token-' + Date.now(), formData.apiKey, 60 * 60 * 1000); // 1 hour session
+      setAdminSession(response.token || 'admin-token-' + Date.now(), null, 60 * 60 * 1000); // 1 hour session
 
       toast.success('Admin login successful');
       const from = location.state?.from?.pathname || '/admin';
       navigate(from, { replace: true });
     } catch (error) {
-      const errorMsg = error.message || 'Invalid credentials or API key';
+      const errorMsg = error.message || 'Invalid credentials';
       setLoginError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -158,32 +154,6 @@ const AdminLogin = () => {
                 />
               </div>
               {errors.password && <p className="mt-1 text-sm text-red-300">{errors.password}</p>}
-            </div>
-
-            {/* API Key Field */}
-            <div>
-              <label htmlFor="apiKey" className="block text-sm font-semibold text-gray-200 mb-2">
-                API Key <span className="text-xs text-gray-400">(Required for admin access)</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                </div>
-                <input
-                  id="apiKey"
-                  name="apiKey"
-                  type="password"
-                  value={formData.apiKey}
-                  onChange={handleChange}
-                  className={`block w-full pl-10 pr-3 py-3 bg-white/10 border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.apiKey ? 'border-red-500 bg-red-500/20' : 'border-white/20'
-                  }`}
-                  placeholder="Enter your API key"
-                />
-              </div>
-              {errors.apiKey && <p className="mt-1 text-sm text-red-300">{errors.apiKey}</p>}
             </div>
 
             {/* Login Button */}
