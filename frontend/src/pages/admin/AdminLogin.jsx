@@ -59,7 +59,7 @@ const AdminLogin = () => {
       
       // Store admin session
       const { setAdminSession } = await import('../../utils/adminSession');
-      setAdminSession(response.token || 'admin-token-' + Date.now(), null, 60 * 60 * 1000); // 1 hour session
+      setAdminSession(response.token || 'admin-token-' + Date.now());
 
       toast.success('Admin login successful');
       const from = location.state?.from?.pathname || '/admin';

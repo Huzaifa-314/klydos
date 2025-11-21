@@ -72,8 +72,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             
             {/* Admin Routes */}
-            {/* TEMPORARY: Admin login route disabled when security is off - uncomment when enabling security */}
-            {/* <Route path="/admin/login" element={<AdminLogin />} /> */}
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route
               path="/admin"
               element={

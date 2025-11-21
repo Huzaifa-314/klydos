@@ -3,8 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { isAdminSessionValid, clearAdminSession } from '../../utils/adminSession';
 
-// TEMPORARY: Admin security disabled - set to true to enable security
-const ADMIN_SECURITY_ENABLED = false;
+// Admin security enabled
+const ADMIN_SECURITY_ENABLED = true;
 
 const ProtectedAdminRoute = ({ children }) => {
   const { loading } = useAuth();
