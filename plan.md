@@ -32,8 +32,9 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 ## Data Models and API Design
 
 ### User Service (`users` DB)
-- Table `users` (id, name, email, created_at)
-- API: `POST /users` (register), `GET /users/{id}`
+- Table `users` (id, name, email, password_hash, created_at)
+- Table `sessions` (id, user_id, token UNIQUE, expires_at, created_at)
+- API: `POST /users/register` (register), `POST /users/login` (login), `POST /users/logout` (logout), `GET /users/me` (get current user), `GET /users/{id}`
 - Keeps donation history via foreign keys or events.
 
 ### Campaign Service (`campaigns` DB)
@@ -62,8 +63,53 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 ### Admin Panel
 - UI (React or simple HTML) under `/admin` path
 - API: `GET/POST /admin/campaigns`, `GET /admin/metrics`
+- All admin endpoints require `X-API-Key` header for authentication
 
 All APIs are documented (OpenAPI/Swagger schemas) and use JSON over HTTP or events.
+
+## Authentication & Authorization
+
+### User Authentication (Registered Users)
+- **Session-Based Authentication**: Simple token-based sessions
+  - `POST /users/register` - Create account (email, password, name)
+  - `POST /users/login` - Authenticate and receive session token
+  - `POST /users/logout` - Invalidate session token
+  - `GET /users/me` - Get current user profile (requires session token)
+  - Passwords hashed with bcrypt
+  - Session tokens: Random 32-byte hex strings stored in database
+  - Token expiration: 7 days (configurable)
+  - Tokens sent via `Authorization: Bearer <token>` header or cookie
+
+### Guest Users
+- **No Authentication Required**: Anonymous donations allowed
+  - Users can make donations without registering
+  - `user_id` is null in pledges table for guest donations
+  - No session token needed
+
+### Admin Authentication
+- **API Key Authentication**: Simple and stateless
+  - API key stored in environment variable (`ADMIN_API_KEY`)
+  - All `/admin/*` endpoints require `X-API-Key` header
+  - Middleware validates API key matches env var
+  - No database lookups needed
+
+### Implementation Details
+- **User Service Schema**:
+  - Table `users`: `id`, `name`, `email`, `password_hash`, `created_at`
+  - Table `sessions`: `id`, `user_id`, `token` (UNIQUE), `expires_at`, `created_at`
+  
+- **Authentication Middleware**:
+  - Validates session token from `Authorization` header
+  - If valid token → extracts `user_id` from session
+  - If no/invalid token → treats request as guest (user_id = null)
+  - Admin routes check `X-API-Key` header separately
+
+- **Security**:
+  - Password hashing: bcrypt (cost factor 10)
+  - Session tokens: Cryptographically random strings
+  - Token expiration enforced
+  - API key stored in environment variables
+  - HTTPS recommended for production
 
 ## Implementation Strategy (Checkpoint 2)
 
