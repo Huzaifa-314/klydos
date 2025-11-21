@@ -32,16 +32,19 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 ## Data Models and API Design
 
 ### User Service (`users` DB)
-- Table `users` (id, name, email, created_at)
-- API: `POST /users` (register), `GET /users/{id}`
+- Table `users` (id, name, email, password_hash, created_at)
+- Table `sessions` (id, user_id, token UNIQUE, expires_at, created_at)
+- API: `POST /users/register` (register), `POST /users/login` (login), `POST /users/logout` (logout), `GET /users/me` (get current user), `GET /users/{id}`
 - Keeps donation history via foreign keys or events.
 
 ### Campaign Service (`campaigns` DB)
-- Table `campaigns` (id, title, target_amount, created_at)
-- Table `campaign_summary` (campaign_id, total_raised, last_updated)
-- API: `GET /campaigns`, `POST /campaigns`
+- Table `campaigns` (id, title, description, target_amount, photos, status ENUM('draft', 'active', 'completed'), start_date, end_date, created_by, created_at, updated_at, featured)
+- Table `campaign_summary` (id, campaign_id UNIQUE, total_raised, total_donors, last_updated)
+- API: `GET /campaigns` (list with pagination/filtering), `GET /campaigns/{id}` (get details), `POST /campaigns` (create - admin only), `PUT /campaigns/{id}` (update - admin only), `PATCH /campaigns/{id}/status` (update status - admin only), `POST /campaigns/{id}/photos` (upload photos - admin only)
 - Admin panel uses this to manage campaigns.
-- Consumes `PledgeCaptured` events to update `total_raised`.
+- Consumes `PledgeCaptured` events to update `total_raised` and `total_donors` in `campaign_summary`.
+- **Periodic Job**: A background worker runs periodically (e.g., every 5-15 minutes) to recalculate and sync `campaign_summary` from source data (pledges/payments). This ensures data consistency even if events are missed or processed out of order. The job aggregates all successful payments for each campaign and updates `total_raised` and `total_donors` accordingly.
+- Photos stored as JSON array or TEXT[] array in campaigns table (first photo is primary/cover photo).
 
 ### Pledge Service (`pledges` DB)
 - Table `pledges` (id, campaign_id, user_id (nullable), amount, status ENUM, created_at)
@@ -50,9 +53,11 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 - Publishes `PledgeCreated` and later `PledgeCaptured` events.
 
 ### Payment Service (`payments` DB)
+- **Payment Provider**: Stripe (official Go SDK: `github.com/stripe/stripe-go/v76`)
+- Free sandbox/test mode available (no purchase needed)
 - Table `payments` (id, pledge_id, user_id, status, provider_txn_id, amount, idempotency_key, created_at)
 - Table `processed_webhooks` (webhook_id PRIMARY KEY) to dedupe webhooks
-- API: `POST /payments/charge` (internal call by Pledge Service), `POST /payments/webhook` for provider callbacks
+- API: `POST /payments/charge` (internal call by Pledge Service), `POST /payments/webhook` for Stripe callbacks
 - Ensures idempotency using `idempotency_key` and deduplicating webhook events.
 
 ### Notification Service
@@ -62,8 +67,101 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 ### Admin Panel
 - UI (React or simple HTML) under `/admin` path
 - API: `GET/POST /admin/campaigns`, `GET /admin/metrics`
+- All admin endpoints require `X-API-Key` header for authentication
 
 All APIs are documented (OpenAPI/Swagger schemas) and use JSON over HTTP or events.
+
+## Authentication & Authorization
+
+### User Authentication (Registered Users)
+- **Session-Based Authentication**: Simple token-based sessions
+  - `POST /users/register` - Create account (email, password, name)
+  - `POST /users/login` - Authenticate and receive session token
+  - `POST /users/logout` - Invalidate session token
+  - `GET /users/me` - Get current user profile (requires session token)
+  - Passwords hashed with bcrypt
+  - Session tokens: Random 32-byte hex strings stored in database
+  - Token expiration: 7 days (configurable)
+  - Tokens sent via `Authorization: Bearer <token>` header or cookie
+
+### Guest Users
+- **No Authentication Required**: Anonymous donations allowed
+  - Users can make donations without registering
+  - `user_id` is null in pledges table for guest donations
+  - No session token needed
+
+### Admin Authentication
+- **API Key Authentication**: Simple and stateless
+  - API key stored in environment variable (`ADMIN_API_KEY`)
+  - All `/admin/*` endpoints require `X-API-Key` header
+  - Middleware validates API key matches env var
+  - No database lookups needed
+
+### Implementation Details
+- **User Service Schema**:
+  - Table `users`: `id`, `name`, `email`, `password_hash`, `created_at`
+  - Table `sessions`: `id`, `user_id`, `token` (UNIQUE), `expires_at`, `created_at`
+  
+- **Authentication Middleware**:
+  - Validates session token from `Authorization` header
+  - If valid token → extracts `user_id` from session
+  - If no/invalid token → treats request as guest (user_id = null)
+  - Admin routes check `X-API-Key` header separately
+
+- **Security**:
+  - Password hashing: bcrypt (cost factor 10)
+  - Session tokens: Cryptographically random strings
+  - Token expiration enforced
+  - API key stored in environment variables
+  - HTTPS recommended for production
+
+## Validation Rules & Business Logic
+
+### Campaign Validation
+- Campaign must have: title (min 3 chars), description (min 10 chars), target_amount (> 0), end_date (future date)
+- Campaign status: `draft` → `active` → `completed` (simple workflow)
+- Only `active` campaigns can receive donations
+- Campaigns automatically move to `completed` when end_date passes (via periodic job)
+- Cannot create pledge for non-active campaigns
+
+### Pledge/Payment Validation
+- Amount must be positive (> 0)
+- Minimum donation amount: $1 (or equivalent in currency)
+- Maximum donation amount: $100,000 (configurable)
+- Campaign must exist and be `active` status
+- Payment amount must match pledge amount
+
+### User Validation
+- Email must be valid format and unique
+- Password: minimum 8 characters
+- Name: required, min 2 characters
+- Email uniqueness enforced at database level
+
+### API Request Validation
+- All required fields must be present
+- Numeric fields must be valid numbers
+- Date fields must be valid ISO 8601 format
+- Enum fields must match allowed values
+
+## File Upload & Storage
+
+### Campaign Photos
+- **Upload Endpoint**: `POST /campaigns/{id}/photos` (admin only)
+- **Supported Formats**: JPEG, PNG, WebP
+- **Max File Size**: 5MB per photo
+- **Max Photos per Campaign**: 10 photos
+- **Storage**: Cloud storage (Google Cloud Storage or AWS S3) or local filesystem
+- **Photo URLs**: Stored as array in `campaigns.photos` field (JSON or TEXT[])
+- **First Photo**: Treated as primary/cover photo
+- **Processing**: Optional image resizing/optimization before storage
+- **CDN**: Photos served via CDN for fast delivery
+
+### Implementation
+- Multipart form-data upload
+- File validation (type, size) before storage
+- Generate unique filenames to avoid conflicts
+- Store full URL path in database
+- Delete old photos when updating campaign
 
 ## Implementation Strategy (Checkpoint 2)
 
