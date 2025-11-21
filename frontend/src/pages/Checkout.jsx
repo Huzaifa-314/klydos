@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 const Checkout = () => {
@@ -135,9 +136,11 @@ const Checkout = () => {
 
     setIsSubmitting(true);
 
-    // TODO: Replace with actual API call when Pledge Service is available
-    // API Endpoint (Future): POST /api/campaigns/:id/pledge
-    setTimeout(() => {
+    try {
+      // TODO: Replace with actual API call when Pledge Service is available
+      // API Endpoint (Future): POST /api/campaigns/:id/pledge
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
       // Replace with: api.pledges.create(campaign.id, donationData)
       const fees = calculateFees();
       const donationData = {
@@ -156,10 +159,14 @@ const Checkout = () => {
       // Redirect to payment gateway or show success
       // For now, redirect to campaign details with success message
       setIsSubmitting(false);
+      toast.success(`Thank you for your donation of $${fees.amount.toFixed(2)}!`);
       navigate(`/campaigns/${campaign.id}`, {
         state: { donationSuccess: true, amount: fees.amount },
       });
-    }, 1000);
+    } catch (error) {
+      setIsSubmitting(false);
+      toast.error('Failed to process donation. Please try again.');
+    }
   };
 
   if (loading) {

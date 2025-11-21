@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -140,6 +142,8 @@ const Navbar = () => {
                         onClick={async () => {
                           await logout();
                           setIsUserMenuOpen(false);
+                          toast.success('Logged out successfully');
+                          navigate('/');
                         }}
                       >
                         Logout
@@ -282,6 +286,8 @@ const Navbar = () => {
                   onClick={async () => {
                     await logout();
                     setIsMenuOpen(false);
+                    toast.success('Logged out successfully');
+                    navigate('/');
                   }}
                 >
                   Logout

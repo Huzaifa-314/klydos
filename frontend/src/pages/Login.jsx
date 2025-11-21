@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -68,13 +69,18 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        toast.success(`Welcome back, ${result.data.user.name}!`);
         // Navigate to home or previous page
         navigate('/');
       } else {
-        setLoginError(result.error || 'Invalid email or password');
+        const errorMsg = result.error || 'Invalid email or password';
+        setLoginError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
-      setLoginError(error.message || 'An error occurred during login');
+      const errorMsg = error.message || 'An error occurred during login';
+      setLoginError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ const Register = () => {
       });
 
       if (result.success) {
+        toast.success('Account created successfully! Redirecting to login...');
         setSuccess(true);
         // Redirect to login after 2 seconds
         setTimeout(() => {
@@ -108,8 +110,11 @@ const Register = () => {
         }, 2000);
       } else {
         // Handle registration errors
+        let errorMessage = result.error || 'Registration failed. Please try again.';
+        
         if (result.error.includes('Email already registered') || result.error.includes('409')) {
-          setErrors({ email: 'Email already registered' });
+          errorMessage = 'Email already registered';
+          setErrors({ email: errorMessage });
         } else if (result.error.includes('email')) {
           setErrors({ email: result.error });
         } else if (result.error.includes('password')) {
@@ -117,11 +122,15 @@ const Register = () => {
         } else if (result.error.includes('name')) {
           setErrors({ name: result.error });
         } else {
-          setErrors({ general: result.error || 'Registration failed. Please try again.' });
+          setErrors({ general: errorMessage });
         }
+        
+        toast.error(errorMessage);
       }
     } catch (error) {
-      setErrors({ general: error.message || 'An error occurred during registration' });
+      const errorMsg = error.message || 'An error occurred during registration';
+      setErrors({ general: errorMsg });
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
