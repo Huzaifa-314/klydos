@@ -21,12 +21,13 @@ const CampaignsManagement = () => {
         const data = await api.campaigns.list({});
         
         // Transform API response to match component expectations
+        // Campaign Service returns total_raised and total_donors directly on the campaign object
         const transformedCampaigns = (data || []).map(campaign => ({
           id: campaign.id,
           title: campaign.title,
           category: campaign.category || 'Uncategorized',
           goal: parseFloat(campaign.target_amount || 0),
-          raised: parseFloat(campaign.campaign_summary?.total_raised || 0),
+          raised: parseFloat(campaign.total_raised || 0),
           status: campaign.status,
           start_date: campaign.start_date,
           end_date: campaign.end_date,
@@ -38,7 +39,6 @@ const CampaignsManagement = () => {
         setFilteredCampaigns(transformedCampaigns);
       } catch (error) {
         console.error('Failed to fetch campaigns:', error);
-        toast.error('Failed to load campaigns');
         setCampaigns([]);
         setFilteredCampaigns([]);
       } finally {
@@ -85,12 +85,13 @@ const CampaignsManagement = () => {
       
       // Refresh campaigns list
       const data = await api.campaigns.list({});
+      // Campaign Service returns total_raised and total_donors directly on the campaign object
       const transformedCampaigns = (data || []).map(campaign => ({
         id: campaign.id,
         title: campaign.title,
         category: campaign.category || 'Uncategorized',
         goal: parseFloat(campaign.target_amount || 0),
-        raised: parseFloat(campaign.campaign_summary?.total_raised || 0),
+        raised: parseFloat(campaign.total_raised || 0),
         status: campaign.status,
         start_date: campaign.start_date,
         end_date: campaign.end_date,
@@ -198,7 +199,37 @@ const CampaignsManagement = () => {
             </div>
           ) : filteredCampaigns.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-gray-600">No campaigns found</p>
+              <svg className="w-24 h-24 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {campaigns.length === 0 ? 'No Campaigns Available' : 'No Campaigns Match Your Filters'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {campaigns.length === 0 
+                  ? 'There are no campaigns in the system yet. Create your first campaign to get started.'
+                  : 'Try adjusting your search or filter criteria to find campaigns.'}
+              </p>
+              {campaigns.length === 0 && (
+                <Link
+                  to="/admin/campaigns/create"
+                  className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  ➕ Create Your First Campaign
+                </Link>
+              )}
+              {(searchQuery || statusFilter !== 'all' || categoryFilter !== 'all') && campaigns.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStatusFilter('all');
+                    setCategoryFilter('all');
+                  }}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

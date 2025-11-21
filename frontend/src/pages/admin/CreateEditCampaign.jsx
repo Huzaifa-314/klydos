@@ -14,7 +14,6 @@ const CreateEditCampaign = () => {
     description: '',
     long_description: '',
     target_amount: '',
-    category: '',
     start_date: '',
     end_date: '',
     location: '',
@@ -35,7 +34,6 @@ const CreateEditCampaign = () => {
             description: campaignData.description || '',
             long_description: campaignData.long_description || campaignData.description || '',
             target_amount: campaignData.target_amount?.toString() || '',
-            category: campaignData.category || '',
             start_date: campaignData.start_date ? new Date(campaignData.start_date).toISOString().split('T')[0] : '',
             end_date: campaignData.end_date ? new Date(campaignData.end_date).toISOString().split('T')[0] : '',
             location: campaignData.location || '',
@@ -103,7 +101,6 @@ const CreateEditCampaign = () => {
         description: formData.description,
         long_description: formData.long_description || formData.description,
         target_amount: parseFloat(formData.target_amount),
-        category: formData.category,
         start_date: formData.start_date ? new Date(formData.start_date).toISOString() : undefined,
         end_date: formData.end_date ? new Date(formData.end_date).toISOString() : undefined,
         location: formData.location || undefined,
@@ -180,9 +177,6 @@ const CreateEditCampaign = () => {
               <div>
                 <span className="text-gray-500">Goal:</span> ${formData.target_amount || '0'}
               </div>
-              <div>
-                <span className="text-gray-500">Category:</span> {formData.category || 'N/A'}
-              </div>
             </div>
           </div>
         ) : (
@@ -257,26 +251,6 @@ const CreateEditCampaign = () => {
                   min="1"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select category</option>
-                  <option value="Medical">Medical</option>
-                  <option value="Education">Education</option>
-                  <option value="Emergency">Emergency</option>
-                  <option value="Food & Shelter">Food & Shelter</option>
-                </select>
               </div>
 
               {/* Start Date */}

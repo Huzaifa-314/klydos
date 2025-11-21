@@ -18,6 +18,7 @@ import CampaignsManagement from './pages/admin/CampaignsManagement';
 import CreateEditCampaign from './pages/admin/CreateEditCampaign';
 import DonationsManagement from './pages/admin/DonationsManagement';
 import UsersManagement from './pages/admin/UsersManagement';
+import UserDetails from './pages/admin/UserDetails';
 import PaymentsGateway from './pages/admin/PaymentsGateway';
 import RefundsChargebacks from './pages/admin/RefundsChargebacks';
 import Monitoring from './pages/admin/Monitoring';
@@ -118,6 +119,14 @@ function App() {
               element={
                 <ProtectedAdminRoute>
                   <UsersManagement />
+                </ProtectedAdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users/:id"
+              element={
+                <ProtectedAdminRoute>
+                  <UserDetails />
                 </ProtectedAdminRoute>
               }
             />

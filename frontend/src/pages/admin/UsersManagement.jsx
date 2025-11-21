@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import toast from 'react-hot-toast';
 
@@ -159,13 +160,13 @@ const UsersManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => toast.info('View profile feature coming soon')}
+                          <Link
+                            to={`/admin/users/${user.id}`}
                             className="text-blue-600 hover:text-blue-800"
                             title="View Profile"
                           >
                             👁️
-                          </button>
+                          </Link>
                           {user.role === 'user' && (
                             <button
                               onClick={() => handlePromote(user.id)}
