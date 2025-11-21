@@ -32,13 +32,19 @@ const getAuthHeaders = () => {
   };
 };
 
-// Get admin auth headers (uses admin token)
+// Get admin auth headers (uses admin token + API key if needed)
 const getAdminAuthHeaders = async () => {
   const { getAdminToken } = await import('../utils/adminSession');
   const adminToken = getAdminToken();
+  
+  // Note: According to implementation, admin endpoints require X-API-Key
+  // For now, we'll use admin token. Backend should validate admin role from token
+  // If backend requires X-API-Key, it should be stored server-side or provided via env
   return {
     'Content-Type': 'application/json',
     ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
+    // TODO: Add X-API-Key header if backend requires it
+    // 'X-API-Key': process.env.REACT_APP_ADMIN_API_KEY || '',
   };
 };
 
@@ -111,33 +117,93 @@ export const api = {
     },
   },
 
-  // Campaign Service Endpoints (Future - placeholder)
+  // Campaign Service Endpoints
   campaigns: {
-    // List all campaigns
+    // List all campaigns (public)
     list: async (params = {}) => {
-      // TODO: Replace with actual API when available
-      // const queryString = new URLSearchParams(params).toString();
-      // const response = await fetch(`${API_BASE_URL}/campaigns?${queryString}`, {
-      //   method: 'GET',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-      // return handleResponse(response);
-      throw new Error('Campaign service not yet available');
+      const queryParams = new URLSearchParams();
+      if (params.status) queryParams.append('status', params.status);
+      if (params.featured !== undefined) queryParams.append('featured', params.featured);
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/campaigns${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return handleResponse(response);
     },
 
-    // Get campaign by ID
+    // Get campaign by ID (public)
     getById: async (id) => {
-      // TODO: Replace with actual API when available
-      // const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
-      //   method: 'GET',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      // });
-      // return handleResponse(response);
-      throw new Error('Campaign service not yet available');
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return handleResponse(response);
+    },
+
+    // Create campaign (admin only)
+    create: async (campaignData) => {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(campaignData),
+      });
+      return handleResponse(response);
+    },
+
+    // Update campaign (admin only)
+    update: async (id, campaignData) => {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(campaignData),
+      });
+      return handleResponse(response);
+    },
+
+    // Update campaign status (admin only)
+    updateStatus: async (id, status) => {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status }),
+      });
+      return handleResponse(response);
+    },
+
+    // Upload campaign photos (admin only)
+    uploadPhotos: async (id, photos) => {
+      const { getAdminToken } = await import('../utils/adminSession');
+      const adminToken = getAdminToken();
+      const formData = new FormData();
+      photos.forEach((photo) => {
+        formData.append('photos', photo);
+      });
+      
+      const headers = {};
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+      }
+      // Note: Don't set Content-Type for FormData, browser will set it with boundary
+      
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/photos`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      return handleResponse(response);
     },
   },
 
@@ -218,54 +284,66 @@ export const api = {
       return handleResponse(response);
     },
 
-    // Campaign Management
+    // Campaign Management (Admin endpoints use /api/campaigns with admin auth)
     getCampaigns: async (params = {}) => {
+      // Use regular campaigns endpoint - admin can see all campaigns
       const queryString = new URLSearchParams(params).toString();
-      const response = await fetch(`${API_BASE_URL}/admin/campaigns?${queryString}`, {
+      const response = await fetch(`${API_BASE_URL}/campaigns?${queryString}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       return handleResponse(response);
     },
 
     createCampaign: async (campaignData) => {
-      const response = await fetch(`${API_BASE_URL}/admin/campaigns`, {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify(campaignData),
       });
       return handleResponse(response);
     },
 
     updateCampaign: async (id, campaignData) => {
-      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}`, {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify(campaignData),
       });
       return handleResponse(response);
     },
 
     updateCampaignStatus: async (id, status) => {
-      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}/status`, {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/status`, {
         method: 'PATCH',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ status }),
       });
       return handleResponse(response);
     },
 
     uploadCampaignPhotos: async (id, photos) => {
+      const { getAdminToken } = await import('../utils/adminSession');
+      const adminToken = getAdminToken();
       const formData = new FormData();
       photos.forEach((photo) => {
         formData.append('photos', photo);
       });
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}/photos`, {
+      
+      const headers = {};
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`;
+      }
+      // Note: Don't set Content-Type for FormData, browser will set it with boundary
+      
+      const response = await fetch(`${API_BASE_URL}/campaigns/${id}/photos`, {
         method: 'POST',
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
+        headers,
         body: formData,
       });
       return handleResponse(response);

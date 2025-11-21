@@ -2,8 +2,14 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const CampaignCard = ({ campaign }) => {
   const navigate = useNavigate();
-  const progress = campaign.total_raised > 0 
-    ? Math.min((campaign.total_raised / campaign.target_amount) * 100, 100) 
+  
+  // Handle API response format - campaign_summary contains total_raised and total_donors
+  const totalRaised = campaign.campaign_summary?.total_raised || campaign.total_raised || 0;
+  const totalDonors = campaign.campaign_summary?.total_donors || campaign.total_donors || 0;
+  const targetAmount = parseFloat(campaign.target_amount || 0);
+  
+  const progress = totalRaised > 0 && targetAmount > 0
+    ? Math.min((parseFloat(totalRaised) / targetAmount) * 100, 100) 
     : 0;
 
   const handleCardClick = (e) => {
@@ -54,10 +60,10 @@ const CampaignCard = ({ campaign }) => {
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-semibold text-gray-900">
-              ${campaign.total_raised?.toLocaleString() || 0}
+              ${parseFloat(totalRaised).toLocaleString()}
             </span>
             <span className="text-sm text-gray-500">
-              of ${campaign.target_amount?.toLocaleString()}
+              of ${targetAmount.toLocaleString()}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -68,7 +74,7 @@ const CampaignCard = ({ campaign }) => {
           </div>
           <div className="flex justify-between items-center mt-2">
             <span className="text-xs text-gray-500">
-              {campaign.total_donors || 0} donors
+              {totalDonors} donors
             </span>
             <span className="text-xs font-semibold text-gray-700">
               {progress.toFixed(0)}% funded

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import CampaignCard from '../components/CampaignCard';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const Campaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -9,163 +11,24 @@ const Campaigns = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // TODO: Replace with actual API call when Campaign Service is available
-  // API Endpoint (Future): GET /api/campaigns
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      // Mock campaigns data - Replace with: api.campaigns.list(params)
-      const mockCampaigns = [
-        {
-          id: 1,
-          title: 'Help Build a School in Rural Area',
-          description: 'Support education for underprivileged children by helping us build a school in a remote village.',
-          target_amount: 50000,
-          total_raised: 32000,
-          total_donors: 145,
-          photos: [],
-          category: 'Education',
-          featured: true,
-          created_at: '2024-01-15',
-        },
-        {
-          id: 2,
-          title: 'Emergency Medical Fund for Cancer Treatment',
-          description: 'Help save lives by supporting cancer treatment for patients who cannot afford it.',
-          target_amount: 75000,
-          total_raised: 45000,
-          total_donors: 289,
-          photos: [],
-          category: 'Medical',
-          featured: true,
-          created_at: '2024-02-10',
-        },
-        {
-          id: 3,
-          title: 'Food & Shelter for Homeless Families',
-          description: 'Provide essential food and shelter to homeless families during the winter season.',
-          target_amount: 30000,
-          total_raised: 18500,
-          total_donors: 98,
-          photos: [],
-          category: 'Food & Shelter',
-          featured: true,
-          created_at: '2024-03-05',
-        },
-        {
-          id: 4,
-          title: 'Disaster Relief Fund',
-          description: 'Support communities affected by natural disasters with immediate relief and rebuilding efforts.',
-          target_amount: 100000,
-          total_raised: 67000,
-          total_donors: 456,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-          created_at: '2024-04-20',
-        },
-        {
-          id: 5,
-          title: 'Clean Water Initiative',
-          description: 'Bring clean drinking water to communities that lack access to safe water sources.',
-          target_amount: 40000,
-          total_raised: 22000,
-          total_donors: 167,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-          created_at: '2024-05-12',
-        },
-        {
-          id: 6,
-          title: 'Scholarship Program for Deserving Students',
-          description: 'Help bright students continue their education with scholarships for higher studies.',
-          target_amount: 60000,
-          total_raised: 38000,
-          total_donors: 203,
-          photos: [],
-          category: 'Education',
-          featured: false,
-          created_at: '2024-06-01',
-        },
-        {
-          id: 7,
-          title: 'Medical Equipment for Rural Clinic',
-          description: 'Provide essential medical equipment to a rural clinic serving thousands of patients.',
-          target_amount: 45000,
-          total_raised: 28000,
-          total_donors: 134,
-          photos: [],
-          category: 'Medical',
-          featured: false,
-          created_at: '2024-07-15',
-        },
-        {
-          id: 8,
-          title: 'Emergency Housing for Flood Victims',
-          description: 'Help families who lost their homes in recent floods rebuild their lives.',
-          target_amount: 80000,
-          total_raised: 52000,
-          total_donors: 312,
-          photos: [],
-          category: 'Food & Shelter',
-          featured: false,
-          created_at: '2024-08-10',
-        },
-        {
-          id: 9,
-          title: 'Library Books for Community Center',
-          description: 'Stock a community library with books and learning materials for children and adults.',
-          target_amount: 25000,
-          total_raised: 15000,
-          total_donors: 89,
-          photos: [],
-          category: 'Education',
-          featured: false,
-          created_at: '2024-09-05',
-        },
-        {
-          id: 10,
-          title: 'Emergency Food Distribution Program',
-          description: 'Provide nutritious meals to families facing food insecurity in urban areas.',
-          target_amount: 35000,
-          total_raised: 21000,
-          total_donors: 156,
-          photos: [],
-          category: 'Food & Shelter',
-          featured: false,
-          created_at: '2024-10-01',
-        },
-        {
-          id: 11,
-          title: 'Pediatric Care Unit Expansion',
-          description: 'Expand pediatric care facilities to serve more children in need of medical attention.',
-          target_amount: 90000,
-          total_raised: 58000,
-          total_donors: 378,
-          photos: [],
-          category: 'Medical',
-          featured: false,
-          created_at: '2024-10-15',
-        },
-        {
-          id: 12,
-          title: 'Emergency Response Vehicle Fund',
-          description: 'Purchase and equip emergency response vehicles for rapid disaster response.',
-          target_amount: 120000,
-          total_raised: 75000,
-          total_donors: 445,
-          photos: [],
-          category: 'Emergency',
-          featured: false,
-          created_at: '2024-11-01',
-        },
-      ];
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        const data = await api.campaigns.list({ status: 'active' });
+        setCampaigns(data || []);
+        setFilteredCampaigns(data || []);
+      } catch (error) {
+        console.error('Failed to fetch campaigns:', error);
+        toast.error('Failed to load campaigns. Please try again later.');
+        setCampaigns([]);
+        setFilteredCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setCampaigns(mockCampaigns);
-      setFilteredCampaigns(mockCampaigns);
-      setLoading(false);
-    }, 500);
+    fetchCampaigns();
   }, []);
 
   // Filter and sort campaigns
@@ -195,13 +58,25 @@ const Campaigns = () => {
         filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         break;
       case 'most-funded':
-        filtered.sort((a, b) => b.total_raised - a.total_raised);
+        filtered.sort((a, b) => {
+          const aRaised = parseFloat(a.campaign_summary?.total_raised || a.total_raised || 0);
+          const bRaised = parseFloat(b.campaign_summary?.total_raised || b.total_raised || 0);
+          return bRaised - aRaised;
+        });
         break;
       case 'least-funded':
-        filtered.sort((a, b) => a.total_raised - b.total_raised);
+        filtered.sort((a, b) => {
+          const aRaised = parseFloat(a.campaign_summary?.total_raised || a.total_raised || 0);
+          const bRaised = parseFloat(b.campaign_summary?.total_raised || b.total_raised || 0);
+          return aRaised - bRaised;
+        });
         break;
       case 'most-donors':
-        filtered.sort((a, b) => (b.total_donors || 0) - (a.total_donors || 0));
+        filtered.sort((a, b) => {
+          const aDonors = parseInt(a.campaign_summary?.total_donors || a.total_donors || 0);
+          const bDonors = parseInt(b.campaign_summary?.total_donors || b.total_donors || 0);
+          return bDonors - aDonors;
+        });
         break;
       default:
         break;

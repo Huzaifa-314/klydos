@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CampaignsManagement = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -13,50 +14,39 @@ const CampaignsManagement = () => {
   const [selectedCampaigns, setSelectedCampaigns] = useState([]);
 
   useEffect(() => {
-    // TODO: Replace with actual API call: GET /api/admin/campaigns
-    setTimeout(() => {
-      const mockCampaigns = [
-        {
-          id: 1,
-          title: 'Help Build a School in Rural Area',
-          category: 'Education',
-          goal: 50000,
-          raised: 32000,
-          status: 'active',
-          start_date: '2024-01-15',
-          end_date: '2024-12-31',
-          organizer: 'Education Foundation',
-          verified: true,
-        },
-        {
-          id: 2,
-          title: 'Emergency Medical Fund for Cancer Treatment',
-          category: 'Medical',
-          goal: 75000,
-          raised: 45000,
-          status: 'active',
-          start_date: '2024-02-10',
-          end_date: '2024-12-31',
-          organizer: 'Medical Trust',
-          verified: true,
-        },
-        {
-          id: 3,
-          title: 'Food & Shelter for Homeless Families',
-          category: 'Food & Shelter',
-          goal: 30000,
-          raised: 18500,
-          status: 'draft',
-          start_date: '2024-03-05',
-          end_date: '2024-12-31',
-          organizer: 'Community Center',
-          verified: false,
-        },
-      ];
-      setCampaigns(mockCampaigns);
-      setFilteredCampaigns(mockCampaigns);
-      setLoading(false);
-    }, 500);
+    const fetchCampaigns = async () => {
+      try {
+        setLoading(true);
+        // Fetch all campaigns (admin can see all statuses)
+        const data = await api.campaigns.list({});
+        
+        // Transform API response to match component expectations
+        const transformedCampaigns = (data || []).map(campaign => ({
+          id: campaign.id,
+          title: campaign.title,
+          category: campaign.category || 'Uncategorized',
+          goal: parseFloat(campaign.target_amount || 0),
+          raised: parseFloat(campaign.campaign_summary?.total_raised || 0),
+          status: campaign.status,
+          start_date: campaign.start_date,
+          end_date: campaign.end_date,
+          organizer: campaign.created_by ? 'User' : 'System',
+          verified: campaign.status === 'active', // Consider active campaigns as verified
+        }));
+        
+        setCampaigns(transformedCampaigns);
+        setFilteredCampaigns(transformedCampaigns);
+      } catch (error) {
+        console.error('Failed to fetch campaigns:', error);
+        toast.error('Failed to load campaigns');
+        setCampaigns([]);
+        setFilteredCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCampaigns();
   }, []);
 
   useEffect(() => {
@@ -88,9 +78,31 @@ const CampaignsManagement = () => {
     setSelectedCampaigns([]);
   };
 
-  const handleStatusChange = (campaignId, newStatus) => {
-    // TODO: Replace with actual API call: PATCH /api/campaigns/:id/status
-    toast.success(`Campaign status updated to ${newStatus}`);
+  const handleStatusChange = async (campaignId, newStatus) => {
+    try {
+      await api.campaigns.updateStatus(campaignId, newStatus);
+      toast.success(`Campaign status updated to ${newStatus}`);
+      
+      // Refresh campaigns list
+      const data = await api.campaigns.list({});
+      const transformedCampaigns = (data || []).map(campaign => ({
+        id: campaign.id,
+        title: campaign.title,
+        category: campaign.category || 'Uncategorized',
+        goal: parseFloat(campaign.target_amount || 0),
+        raised: parseFloat(campaign.campaign_summary?.total_raised || 0),
+        status: campaign.status,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
+        organizer: campaign.created_by ? 'User' : 'System',
+        verified: campaign.status === 'active',
+      }));
+      setCampaigns(transformedCampaigns);
+      setFilteredCampaigns(transformedCampaigns);
+    } catch (error) {
+      console.error('Failed to update campaign status:', error);
+      toast.error('Failed to update campaign status');
+    }
   };
 
   const handleVerify = (campaignId) => {
