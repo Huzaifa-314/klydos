@@ -30,13 +30,13 @@ const Homepage = () => {
         setFeaturedCampaigns(featured || []);
         
         // Calculate stats from campaigns
-        // Note: Campaign Service returns campaigns with summary data
+        // Note: Campaign Service returns campaigns with total_raised and total_donors directly on the campaign object
         const totalRaised = allCampaigns?.reduce((sum, c) => {
-          return sum + (parseFloat(c.campaign_summary?.total_raised || 0));
+          return sum + (parseFloat(c.total_raised || 0));
         }, 0) || 0;
-        
+
         const totalDonors = allCampaigns?.reduce((sum, c) => {
-          return sum + (parseInt(c.campaign_summary?.total_donors || 0));
+          return sum + (parseInt(c.total_donors || 0));
         }, 0) || 0;
         
         setStats({
@@ -221,7 +221,7 @@ const Homepage = () => {
                           <div className="mb-6">
                             <div className="flex justify-between mb-2">
                               <span className="text-lg font-bold text-gray-900">
-                                ${parseFloat(campaign.campaign_summary?.total_raised || campaign.total_raised || 0).toLocaleString()}
+                                ${parseFloat(campaign.total_raised || 0).toLocaleString()}
                               </span>
                               <span className="text-gray-600">
                                 of ${parseFloat(campaign.target_amount || 0).toLocaleString()}
@@ -230,7 +230,7 @@ const Homepage = () => {
                             <div className="w-full bg-gray-200 rounded-full h-3">
                               <div
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full"
-                                style={{ width: `${Math.min((parseFloat(campaign.campaign_summary?.total_raised || campaign.total_raised || 0) / parseFloat(campaign.target_amount || 1)) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((parseFloat(campaign.total_raised || 0) / parseFloat(campaign.target_amount || 1)) * 100, 100)}%` }}
                               />
                             </div>
                           </div>

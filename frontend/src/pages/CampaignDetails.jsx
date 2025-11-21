@@ -39,11 +39,11 @@ const CampaignDetails = () => {
         const campaignData = await api.campaigns.getById(id);
         
         // Transform API response to match component expectations
+        // Campaign Service returns total_raised and total_donors directly on the campaign object
         const campaign = {
           ...campaignData,
-          // Use campaign_summary data if available
-          total_raised: campaignData.campaign_summary?.total_raised || 0,
-          total_donors: campaignData.campaign_summary?.total_donors || 0,
+          total_raised: campaignData.total_raised || 0,
+          total_donors: campaignData.total_donors || 0,
           // Use description as long_description if long_description not provided
           long_description: campaignData.long_description || campaignData.description || '',
         };

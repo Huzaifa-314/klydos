@@ -58,22 +58,22 @@ const Campaigns = () => {
         break;
       case 'most-funded':
         filtered.sort((a, b) => {
-          const aRaised = parseFloat(a.campaign_summary?.total_raised || a.total_raised || 0);
-          const bRaised = parseFloat(b.campaign_summary?.total_raised || b.total_raised || 0);
+          const aRaised = parseFloat(a.total_raised || 0);
+          const bRaised = parseFloat(b.total_raised || 0);
           return bRaised - aRaised;
         });
         break;
       case 'least-funded':
         filtered.sort((a, b) => {
-          const aRaised = parseFloat(a.campaign_summary?.total_raised || a.total_raised || 0);
-          const bRaised = parseFloat(b.campaign_summary?.total_raised || b.total_raised || 0);
+          const aRaised = parseFloat(a.total_raised || 0);
+          const bRaised = parseFloat(b.total_raised || 0);
           return aRaised - bRaised;
         });
         break;
       case 'most-donors':
         filtered.sort((a, b) => {
-          const aDonors = parseInt(a.campaign_summary?.total_donors || a.total_donors || 0);
-          const bDonors = parseInt(b.campaign_summary?.total_donors || b.total_donors || 0);
+          const aDonors = parseInt(a.total_donors || 0);
+          const bDonors = parseInt(b.total_donors || 0);
           return bDonors - aDonors;
         });
         break;

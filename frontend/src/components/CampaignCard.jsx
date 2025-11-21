@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 const CampaignCard = ({ campaign }) => {
   const navigate = useNavigate();
   
-  // Handle API response format - campaign_summary contains total_raised and total_donors
-  const totalRaised = campaign.campaign_summary?.total_raised || campaign.total_raised || 0;
-  const totalDonors = campaign.campaign_summary?.total_donors || campaign.total_donors || 0;
+  // Campaign Service returns total_raised and total_donors directly on the campaign object
+  const totalRaised = parseFloat(campaign.total_raised || 0);
+  const totalDonors = parseInt(campaign.total_donors || 0);
   const targetAmount = parseFloat(campaign.target_amount || 0);
   
   const progress = totalRaised > 0 && targetAmount > 0

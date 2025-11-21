@@ -31,10 +31,11 @@ const Checkout = () => {
         const campaignData = await api.campaigns.getById(id);
         
         // Transform API response
+        // Campaign Service returns total_raised and total_donors directly on the campaign object
         const campaign = {
           ...campaignData,
-          total_raised: campaignData.campaign_summary?.total_raised || 0,
-          total_donors: campaignData.campaign_summary?.total_donors || 0,
+          total_raised: campaignData.total_raised || 0,
+          total_donors: campaignData.total_donors || 0,
         };
         
         setCampaign(campaign);
