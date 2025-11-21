@@ -12,6 +12,7 @@ services:
     depends_on:
       - user-service
       - campaign-service
+      - pledge-service
     networks:
       - app-network
     restart: unless-stopped
@@ -47,6 +48,27 @@ services:
     depends_on:
       campaigns_db:
         condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Pledge Service
+  pledge-service:
+    build: ./pledge-service
+    container_name: pledge-service
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@pledges_db:5432/pledges?sslmode=disable
+      - PORT=8082
+      - CAMPAIGN_SERVICE_URL=http://campaign-service:8081
+      - USER_SERVICE_URL=http://user-service:8080
+      - GIN_MODE=release
+    depends_on:
+      pledges_db:
+        condition: service_healthy
+      campaign-service:
+        condition: service_started
       user-service:
         condition: service_started
     networks:
