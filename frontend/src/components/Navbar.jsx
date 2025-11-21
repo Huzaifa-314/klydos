@@ -1,13 +1,22 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
   // TODO: Replace with actual authentication state
   const isAuthenticated = false;
   const user = null; // { name: 'John Doe', email: 'john@example.com' }
+
+  // Check if current path matches the link
+  const isActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -39,25 +48,41 @@ const Navbar = () => {
           <div className="hidden md:flex md:items-center md:space-x-1">
             <Link
               to="/"
-              className="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 font-medium"
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 font-medium ${
+                isActive('/')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
             >
               Home
             </Link>
             <Link
               to="/campaigns"
-              className="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 font-medium"
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 font-medium ${
+                isActive('/campaigns')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
             >
               Campaigns
             </Link>
             <Link
               to="/about"
-              className="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 font-medium"
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 font-medium ${
+                isActive('/about')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 font-medium"
+              className={`px-4 py-2 rounded-lg transition-colors duration-200 font-medium ${
+                isActive('/contact')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
             >
               Contact
             </Link>
@@ -188,28 +213,44 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
             <Link
               to="/"
-              className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+              className={`block px-3 py-2 rounded-md font-medium ${
+                isActive('/')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/campaigns"
-              className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+              className={`block px-3 py-2 rounded-md font-medium ${
+                isActive('/campaigns')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Campaigns
             </Link>
             <Link
               to="/about"
-              className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+              className={`block px-3 py-2 rounded-md font-medium ${
+                isActive('/about')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               About
             </Link>
             <Link
               to="/contact"
-              className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+              className={`block px-3 py-2 rounded-md font-medium ${
+                isActive('/contact')
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
               onClick={() => setIsMenuOpen(false)}
             >
               Contact

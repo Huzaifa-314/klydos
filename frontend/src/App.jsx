@@ -1,6 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import Homepage from './pages/Homepage';
+import Campaigns from './pages/Campaigns';
+import CampaignDetails from './pages/CampaignDetails';
+import About from './pages/About';
+import Contact from './pages/Contact';
 import './App.css';
 
 function App() {
@@ -10,30 +15,11 @@ function App() {
         <Navbar />
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome to CareForAll</h1>
-                <p className="text-gray-600">Your next-generation fundraising platform</p>
-              </div>
-            } />
-            <Route path="/campaigns" element={
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">Campaigns</h1>
-                <p className="text-gray-600">Browse our fundraising campaigns</p>
-              </div>
-            } />
-            <Route path="/about" element={
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">About Us</h1>
-                <p className="text-gray-600">Learn more about CareForAll</p>
-              </div>
-            } />
-            <Route path="/contact" element={
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">Contact Us</h1>
-                <p className="text-gray-600">Get in touch with our team</p>
-              </div>
-            } />
+            <Route path="/" element={<Homepage />} />
+            <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/campaigns/:id" element={<CampaignDetails />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <h1 className="text-4xl font-bold text-gray-900 mb-4">Login</h1>
