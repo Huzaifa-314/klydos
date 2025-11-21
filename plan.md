@@ -38,11 +38,12 @@ To handle sudden traffic bursts (>1000 RPS), we scale services using Docker Comp
 - Keeps donation history via foreign keys or events.
 
 ### Campaign Service (`campaigns` DB)
-- Table `campaigns` (id, title, target_amount, created_at)
-- Table `campaign_summary` (campaign_id, total_raised, last_updated)
-- API: `GET /campaigns`, `POST /campaigns`
+- Table `campaigns` (id, title, description, target_amount, photos, status ENUM, start_date, end_date, created_by, created_at, updated_at, featured)
+- Table `campaign_summary` (id, campaign_id UNIQUE, total_raised, total_donors, last_updated)
+- API: `GET /campaigns` (list with pagination/filtering), `GET /campaigns/{id}` (get details), `POST /campaigns` (create - admin only), `PUT /campaigns/{id}` (update - admin only), `PATCH /campaigns/{id}/status` (update status - admin only)
 - Admin panel uses this to manage campaigns.
-- Consumes `PledgeCaptured` events to update `total_raised`.
+- Consumes `PledgeCaptured` events to update `total_raised` and `total_donors` in `campaign_summary`.
+- Photos stored as JSON array or TEXT[] array in campaigns table (first photo is primary/cover photo).
 
 ### Pledge Service (`pledges` DB)
 - Table `pledges` (id, campaign_id, user_id (nullable), amount, status ENUM, created_at)
