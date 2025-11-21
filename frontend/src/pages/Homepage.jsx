@@ -46,18 +46,37 @@ const Homepage = () => {
           activeDonors: Math.floor(totalDonors * 0.1), // Estimate active donors
         });
 
-        // Mock recent donations (will be replaced when Pledge Service is available)
-        const mockDonations = [
-          { name: 'Ayesha', amount: 20 },
-          { name: 'Rahim', amount: 5 },
-          { name: 'Sara', amount: 50 },
-          { name: 'Mohammed', amount: 100 },
-          { name: 'Fatima', amount: 25 },
-          { name: 'Ali', amount: 15 },
-          { name: 'Hassan', amount: 75 },
-          { name: 'Zainab', amount: 30 },
-        ];
-        setRecentDonations(mockDonations);
+        // Fetch recent pledges/donations for marquee
+        try {
+          const recentPledges = await api.pledges.list({ limit: 20 });
+          
+          if (recentPledges && Array.isArray(recentPledges) && recentPledges.length > 0) {
+            // Fetch user names for pledges with user_id
+            const donationsWithNames = await Promise.all(
+              recentPledges.slice(0, 10).map(async (pledge) => {
+                if (pledge.user_id) {
+                  try {
+                    const userData = await api.users.getUserById(pledge.user_id);
+                    return {
+                      name: userData.name?.split(' ')[0] || 'Anonymous', // Use first name only
+                      amount: pledge.amount,
+                    };
+                  } catch (error) {
+                    return { name: 'Anonymous', amount: pledge.amount };
+                  }
+                } else {
+                  return { name: 'Guest', amount: pledge.amount };
+                }
+              })
+            );
+            setRecentDonations(donationsWithNames);
+          } else {
+            setRecentDonations([]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch recent donations:', error);
+          setRecentDonations([]);
+        }
       } catch (error) {
         console.error('Failed to fetch campaigns:', error);
         console.error('Error details:', {

@@ -48,16 +48,82 @@ const UserDetails = () => {
           setUserCampaigns([]);
         }
 
-        // TODO: Fetch donations when Pledge Service is available
-        // const donationsData = await api.pledges.getByUserId(id);
-        // setDonations(donationsData || []);
-
-        // Mock donations data for now (remove when Pledge Service is available)
-        setDonations([
-          { id: '1', amount: 50, campaign_title: 'Help Build a School', campaign_id: '1', date: '2024-11-15T10:30:00Z' },
-          { id: '2', amount: 25, campaign_title: 'Emergency Medical Fund', campaign_id: '2', date: '2024-11-10T14:20:00Z' },
-          { id: '3', amount: 100, campaign_title: 'Food & Shelter', campaign_id: '3', date: '2024-11-05T09:15:00Z' },
-        ]);
+        // Fetch pledges/donations for this user
+        try {
+          // Try to get pledges by user ID
+          const pledgesData = await api.pledges.getByUserId(id);
+          
+          if (pledgesData && Array.isArray(pledgesData) && pledgesData.length > 0) {
+            // Fetch campaign details for each pledge to get campaign titles
+            const donationsWithCampaigns = await Promise.all(
+              pledgesData.map(async (pledge) => {
+                try {
+                  const campaignData = await api.campaigns.getById(pledge.campaign_id);
+                  return {
+                    id: pledge.id,
+                    amount: pledge.amount,
+                    campaign_title: campaignData.title || 'Unknown Campaign',
+                    campaign_id: pledge.campaign_id,
+                    date: pledge.created_at,
+                    status: pledge.status,
+                  };
+                } catch (error) {
+                  console.error(`Failed to fetch campaign ${pledge.campaign_id}:`, error);
+                  return {
+                    id: pledge.id,
+                    amount: pledge.amount,
+                    campaign_title: 'Unknown Campaign',
+                    campaign_id: pledge.campaign_id,
+                    date: pledge.created_at,
+                    status: pledge.status,
+                  };
+                }
+              })
+            );
+            setDonations(donationsWithCampaigns);
+          } else {
+            // If no pledges endpoint or empty result, try listing all pledges and filtering
+            try {
+              const allPledges = await api.pledges.list({ user_id: id });
+              if (allPledges && Array.isArray(allPledges) && allPledges.length > 0) {
+                const donationsWithCampaigns = await Promise.all(
+                  allPledges.map(async (pledge) => {
+                    try {
+                      const campaignData = await api.campaigns.getById(pledge.campaign_id);
+                      return {
+                        id: pledge.id,
+                        amount: pledge.amount,
+                        campaign_title: campaignData.title || 'Unknown Campaign',
+                        campaign_id: pledge.campaign_id,
+                        date: pledge.created_at,
+                        status: pledge.status,
+                      };
+                    } catch (error) {
+                      return {
+                        id: pledge.id,
+                        amount: pledge.amount,
+                        campaign_title: 'Unknown Campaign',
+                        campaign_id: pledge.campaign_id,
+                        date: pledge.created_at,
+                        status: pledge.status,
+                      };
+                    }
+                  })
+                );
+                setDonations(donationsWithCampaigns);
+              } else {
+                setDonations([]);
+              }
+            } catch (listError) {
+              console.error('Failed to list pledges:', listError);
+              setDonations([]);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch user pledges:', error);
+          // If endpoint doesn't exist, set empty array (no mock data)
+          setDonations([]);
+        }
 
       } catch (error) {
         console.error('Failed to fetch user details:', error);

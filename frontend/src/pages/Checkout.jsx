@@ -146,35 +146,32 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call when Pledge Service is available
-      // API Endpoint (Future): POST /api/campaigns/:id/pledge
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Replace with: api.pledges.create(campaign.id, donationData)
       const fees = calculateFees();
-      const donationData = {
-        campaign_id: campaign.id,
+      
+      // Create pledge via Pledge Service API
+      const pledgeData = {
         amount: fees.amount,
-        donor_name: donorInfo.anonymous ? 'Anonymous' : donorInfo.name,
-        donor_email: donorInfo.email,
-        donor_phone: donorInfo.phone || undefined,
-        anonymous: donorInfo.anonymous,
-        payment_method: paymentMethod,
-        total_amount: fees.total,
+        user_id: isAuthenticated && user ? user.id : null, // Include user_id if logged in, null for guest
       };
 
-      console.log('Donation data:', donationData);
+      console.log('[Checkout] Creating pledge:', pledgeData);
+      
+      const pledge = await api.pledges.create(campaign.id, pledgeData);
+      
+      console.log('[Checkout] Pledge created:', pledge);
 
-      // Redirect to payment gateway or show success
-      // For now, redirect to campaign details with success message
+      // TODO: Redirect to payment gateway when Payment Service is available
+      // For now, show success and redirect to campaign details
       setIsSubmitting(false);
-      toast.success(`Thank you for your donation of $${fees.amount.toFixed(2)}!`);
+      toast.success(`Thank you for your donation of $${fees.amount.toFixed(2)}! Your pledge has been created.`);
       navigate(`/campaigns/${campaign.id}`, {
-        state: { donationSuccess: true, amount: fees.amount },
+        state: { donationSuccess: true, amount: fees.amount, pledgeId: pledge.id },
       });
     } catch (error) {
+      console.error('[Checkout] Failed to create pledge:', error);
       setIsSubmitting(false);
-      toast.error('Failed to process donation. Please try again.');
+      const errorMessage = error.message || 'Failed to process donation. Please try again.';
+      toast.error(errorMessage);
     }
   };
 

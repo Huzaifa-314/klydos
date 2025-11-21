@@ -265,18 +265,89 @@ export const api = {
     },
   },
 
-  // Pledge Service Endpoints (Future - placeholder)
+  // Pledge Service Endpoints
   pledges: {
-    // Create pledge
+    // Create pledge for a campaign
     create: async (campaignId, pledgeData) => {
-      // TODO: Replace with actual API when available
-      // const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/pledge`, {
-      //   method: 'POST',
-      //   headers: getAuthHeaders(),
-      //   body: JSON.stringify(pledgeData),
-      // });
-      // return handleResponse(response);
-      throw new Error('Pledge service not yet available');
+      try {
+        const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/pledge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(), // Include auth token if user is logged in
+          },
+          body: JSON.stringify({
+            amount: pledgeData.amount,
+            user_id: pledgeData.user_id || null, // Optional - null for guest donations
+          }),
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('[API] Create pledge error:', error);
+        throw error;
+      }
+    },
+
+    // Get pledges by user ID (if endpoint exists)
+    getByUserId: async (userId) => {
+      try {
+        // Note: This endpoint may not exist yet in Pledge Service
+        // If it doesn't exist, this will return an error and we'll handle it gracefully
+        const response = await fetch(`${API_BASE_URL}/pledges/user/${userId}`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('[API] Get pledges by user error:', error);
+        // Return empty array if endpoint doesn't exist
+        if (error.status === 404) {
+          return [];
+        }
+        throw error;
+      }
+    },
+
+    // Get all pledges (admin only - if endpoint exists)
+    list: async (params = {}) => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (params.campaign_id) queryParams.append('campaign_id', params.campaign_id);
+        if (params.user_id) queryParams.append('user_id', params.user_id);
+        if (params.status) queryParams.append('status', params.status);
+        if (params.page) queryParams.append('page', params.page);
+        if (params.limit) queryParams.append('limit', params.limit);
+        
+        const queryString = queryParams.toString();
+        const url = `${API_BASE_URL}/pledges${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('[API] List pledges error:', error);
+        // Return empty array if endpoint doesn't exist
+        if (error.status === 404) {
+          return [];
+        }
+        throw error;
+      }
+    },
+
+    // Get pledge by ID
+    getById: async (pledgeId) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/pledges/${pledgeId}`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('[API] Get pledge by ID error:', error);
+        throw error;
+      }
     },
   },
 

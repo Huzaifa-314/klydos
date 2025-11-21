@@ -16,69 +16,83 @@ const DonationsManagement = () => {
   });
 
   useEffect(() => {
-    // TODO: Replace with actual API call: GET /api/admin/donations
-    setTimeout(() => {
-      const mockDonations = [
-        {
-          id: 1,
-          donor_name: 'Ayesha Khan',
-          donor_email: 'ayesha@example.com',
-          amount: 100,
-          campaign_title: 'Help Build a School',
-          status: 'captured',
-          provider_txn_id: 'ch_1234567890',
-          created_at: '2024-11-20T10:30:00Z',
-          anonymous: false,
-        },
-        {
-          id: 2,
-          donor_name: 'Anonymous',
-          donor_email: 'anonymous@example.com',
-          amount: 50,
-          campaign_title: 'Emergency Medical Fund',
-          status: 'captured',
-          provider_txn_id: 'ch_0987654321',
-          created_at: '2024-11-20T09:15:00Z',
-          anonymous: true,
-        },
-        {
-          id: 3,
-          donor_name: 'Mohammed Ali',
-          donor_email: 'mohammed@example.com',
-          amount: 200,
-          campaign_title: 'Food & Shelter',
-          status: 'authorized',
-          provider_txn_id: 'ch_1122334455',
-          created_at: '2024-11-19T16:45:00Z',
-          anonymous: false,
-        },
-        {
-          id: 4,
-          donor_name: 'Fatima Ahmed',
-          donor_email: 'fatima@example.com',
-          amount: 75,
-          campaign_title: 'Help Build a School',
-          status: 'failed',
-          provider_txn_id: null,
-          created_at: '2024-11-19T14:20:00Z',
-          anonymous: false,
-        },
-        {
-          id: 5,
-          donor_name: 'Hassan Raza',
-          donor_email: 'hassan@example.com',
-          amount: 300,
-          campaign_title: 'Disaster Relief Fund',
-          status: 'refunded',
-          provider_txn_id: 'ch_5566778899',
-          created_at: '2024-11-18T18:30:00Z',
-          anonymous: false,
-        },
-      ];
-      setDonations(mockDonations);
-      setFilteredDonations(mockDonations);
-      setLoading(false);
-    }, 500);
+    const fetchDonations = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch all pledges from Pledge Service
+        const pledges = await api.pledges.list({});
+        
+        if (pledges && Array.isArray(pledges) && pledges.length > 0) {
+          // Fetch campaign and user details for each pledge
+          const donationsWithDetails = await Promise.all(
+            pledges.map(async (pledge) => {
+              try {
+                // Fetch campaign details
+                const campaignData = await api.campaigns.getById(pledge.campaign_id);
+                
+                // Fetch user details if user_id exists
+                let donorName = 'Guest Donor';
+                let donorEmail = 'guest@example.com';
+                let anonymous = true;
+                
+                if (pledge.user_id) {
+                  try {
+                    const userData = await api.users.getUserById(pledge.user_id);
+                    donorName = userData.name || 'Unknown User';
+                    donorEmail = userData.email || 'unknown@example.com';
+                    anonymous = false;
+                  } catch (error) {
+                    console.error(`Failed to fetch user ${pledge.user_id}:`, error);
+                  }
+                }
+                
+                return {
+                  id: pledge.id,
+                  donor_name: anonymous ? 'Anonymous' : donorName,
+                  donor_email: anonymous ? 'N/A' : donorEmail,
+                  amount: pledge.amount,
+                  campaign_title: campaignData.title || 'Unknown Campaign',
+                  campaign_id: pledge.campaign_id,
+                  status: pledge.status.toLowerCase(), // AUTHORIZED -> authorized, etc.
+                  provider_txn_id: null, // Will be available when Payment Service is integrated
+                  created_at: pledge.created_at,
+                  anonymous: anonymous,
+                };
+              } catch (error) {
+                console.error(`Failed to process pledge ${pledge.id}:`, error);
+                return {
+                  id: pledge.id,
+                  donor_name: pledge.user_id ? 'Unknown User' : 'Guest Donor',
+                  donor_email: 'N/A',
+                  amount: pledge.amount,
+                  campaign_title: 'Unknown Campaign',
+                  campaign_id: pledge.campaign_id,
+                  status: pledge.status.toLowerCase(),
+                  provider_txn_id: null,
+                  created_at: pledge.created_at,
+                  anonymous: !pledge.user_id,
+                };
+              }
+            })
+          );
+          
+          setDonations(donationsWithDetails);
+          setFilteredDonations(donationsWithDetails);
+        } else {
+          setDonations([]);
+          setFilteredDonations([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch donations:', error);
+        setDonations([]);
+        setFilteredDonations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDonations();
   }, []);
 
   useEffect(() => {
