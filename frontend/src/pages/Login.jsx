@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -62,19 +64,20 @@ const Login = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call - replace with actual API: POST /users/login
-    setTimeout(() => {
-      // Mock login - replace with actual authentication
-      // TODO: Replace with actual API call
-      console.log('Login attempt:', formData);
+    try {
+      const result = await login(formData.email, formData.password);
       
-      // Simulate error for demo (remove in production)
-      // setLoginError('Invalid email or password');
-      
-      // On success, navigate to home or dashboard
+      if (result.success) {
+        // Navigate to home or previous page
+        navigate('/');
+      } else {
+        setLoginError(result.error || 'Invalid email or password');
+      }
+    } catch (error) {
+      setLoginError(error.message || 'An error occurred during login');
+    } finally {
       setIsSubmitting(false);
-      navigate('/');
-    }, 1000);
+    }
   };
 
   const isFormValid = formData.email && formData.password && formData.password.length >= 6;

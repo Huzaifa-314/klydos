@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -91,23 +93,38 @@ const Register = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call - replace with actual API: POST /users/register
-    setTimeout(() => {
-      // TODO: Replace with actual API call
-      console.log('Registration data:', {
+    try {
+      const result = await register({
         name: formData.name,
         email: formData.email,
-        phone: formData.phone || undefined,
+        password: formData.password,
       });
 
+      if (result.success) {
+        setSuccess(true);
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      } else {
+        // Handle registration errors
+        if (result.error.includes('Email already registered') || result.error.includes('409')) {
+          setErrors({ email: 'Email already registered' });
+        } else if (result.error.includes('email')) {
+          setErrors({ email: result.error });
+        } else if (result.error.includes('password')) {
+          setErrors({ password: result.error });
+        } else if (result.error.includes('name')) {
+          setErrors({ name: result.error });
+        } else {
+          setErrors({ general: result.error || 'Registration failed. Please try again.' });
+        }
+      }
+    } catch (error) {
+      setErrors({ general: error.message || 'An error occurred during registration' });
+    } finally {
       setIsSubmitting(false);
-      setSuccess(true);
-
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    }, 1000);
+    }
   };
 
   const isFormValid =
@@ -163,6 +180,16 @@ const Register = () => {
 
         {/* Registration Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
+          {errors.general && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-red-800">{errors.general}</p>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Full Name */}
             <div>

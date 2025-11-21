@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Checkout = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
   const prefillAmount = location.state?.amount;
 
   const [campaign, setCampaign] = useState(null);
@@ -20,11 +22,12 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API call: GET /campaigns/{id}
+  // TODO: Replace with actual API call when Campaign Service is available
+  // API Endpoint (Future): GET /api/campaigns/:id
   useEffect(() => {
     setLoading(true);
     setTimeout(() => {
-      // Mock campaign data - replace with actual API call
+      // Mock campaign data - Replace with: api.campaigns.getById(id)
       const mockCampaign = {
         id: parseInt(id) || 1,
         title: 'Help Build a School in Rural Area',
@@ -39,6 +42,18 @@ const Checkout = () => {
       setLoading(false);
     }, 500);
   }, [id]);
+
+  // Pre-fill user info if logged in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setDonorInfo({
+        name: user.name || '',
+        email: user.email || '',
+        phone: '',
+        anonymous: false,
+      });
+    }
+  }, [isAuthenticated, user]);
 
   const calculateDaysLeft = (endDate) => {
     const end = new Date(endDate);
@@ -120,9 +135,10 @@ const Checkout = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call - replace with actual API: POST /campaigns/{id}/pledge
+    // TODO: Replace with actual API call when Pledge Service is available
+    // API Endpoint (Future): POST /api/campaigns/:id/pledge
     setTimeout(() => {
-      // TODO: Replace with actual API call
+      // Replace with: api.pledges.create(campaign.id, donationData)
       const fees = calculateFees();
       const donationData = {
         campaign_id: campaign.id,
