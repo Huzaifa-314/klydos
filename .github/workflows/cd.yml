@@ -31,11 +31,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Convert repository to lowercase
+        id: repo
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repository=$REPO_LOWER" >> $GITHUB_OUTPUT
+
       - name: Extract metadata for User Service
         id: meta-user
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/user-service
+          images: ${{ env.DOCKER_REGISTRY }}/${{ steps.repo.outputs.repository }}/user-service
           tags: |
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
@@ -57,7 +63,7 @@ jobs:
           context: ./Backend/api-gateway
           file: ./Backend/api-gateway/Dockerfile
           push: true
-          tags: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/api-gateway:${{ env.IMAGE_TAG }},${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/api-gateway:latest
+          tags: ${{ env.DOCKER_REGISTRY }}/${{ steps.repo.outputs.repository }}/api-gateway:${{ env.IMAGE_TAG }},${{ env.DOCKER_REGISTRY }}/${{ steps.repo.outputs.repository }}/api-gateway:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -80,6 +86,12 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.GCE_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Convert repository to lowercase
+        id: repo
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repository=$REPO_LOWER" >> $GITHUB_OUTPUT
+
       - name: Copy deployment files to GCE
         run: |
           ssh ${{ secrets.GCE_USER }}@${{ secrets.GCE_HOST }} "mkdir -p ~/app/api-gateway"
@@ -96,7 +108,7 @@ jobs:
           ssh ${{ secrets.GCE_USER }}@${{ secrets.GCE_HOST }} << EOF
             cd ~/app
             export DOCKER_REGISTRY="${{ env.DOCKER_REGISTRY }}"
-            export GITHUB_REPOSITORY="${{ github.repository }}"
+            export GITHUB_REPOSITORY="${{ steps.repo.outputs.repository }}"
             export IMAGE_TAG="${{ env.IMAGE_TAG }}"
             export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
             bash deploy.sh
