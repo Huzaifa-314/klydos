@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const CampaignCard = ({ campaign }) => {
   const navigate = useNavigate();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   // Campaign Service returns total_raised and total_donors directly on the campaign object
   const totalRaised = parseFloat(campaign.total_raised || 0);
@@ -13,7 +15,7 @@ const CampaignCard = ({ campaign }) => {
     : 0;
 
   const handleCardClick = (e) => {
-    // Don't navigate if clicking on the donate button
+    // Don't navigate if clicking on the donate button or arrow buttons
     if (e.target.closest('a') || e.target.closest('button')) {
       return;
     }
@@ -25,19 +27,84 @@ const CampaignCard = ({ campaign }) => {
     navigate(`/campaigns/${campaign.id}/checkout`);
   };
 
+  const handlePreviousImage = (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (campaign.photos && campaign.photos.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + campaign.photos.length) % campaign.photos.length);
+    }
+  };
+
+  const handleNextImage = (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (campaign.photos && campaign.photos.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % campaign.photos.length);
+    }
+  };
+
   return (
     <div 
       className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden group cursor-pointer"
       onClick={handleCardClick}
     >
       {/* Campaign Image */}
-      <div className="relative h-48 bg-gradient-to-br from-blue-400 to-purple-500 overflow-hidden">
+      <div className="relative h-48 bg-gradient-to-br from-blue-400 to-purple-500 overflow-hidden group/image">
         {campaign.photos && campaign.photos.length > 0 ? (
-          <img
-            src={campaign.photos[0]}
-            alt={campaign.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          />
+          <>
+            <img
+              src={campaign.photos[currentImageIndex] || campaign.photos[0]}
+              alt={campaign.title}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+            
+            {/* Arrow Navigation - Only show if multiple photos */}
+            {campaign.photos.length > 1 && (
+              <>
+                {/* Previous Button */}
+                <button
+                  onClick={handlePreviousImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 z-10"
+                  aria-label="Previous image"
+                  type="button"
+                >
+                  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                
+                {/* Next Button */}
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 z-10"
+                  aria-label="Next image"
+                  type="button"
+                >
+                  <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
+                {/* Image Indicator Dots */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {campaign.photos.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentImageIndex(idx);
+                      }}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                        idx === currentImageIndex
+                          ? 'bg-white w-4'
+                          : 'bg-white/50 hover:bg-white/75'
+                      }`}
+                      aria-label={`Go to image ${idx + 1}`}
+                      type="button"
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <svg className="w-16 h-16 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
