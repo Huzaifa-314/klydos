@@ -43,6 +43,9 @@ jobs:
           flags: user-service
           name: user-service-coverage
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Docker image
         run: |
           docker build -t user-service:test -f Dockerfile .
@@ -84,8 +87,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Validate docker-compose.yml
         working-directory: ./Backend
         run: |
-          docker-compose config
+          docker compose config
 
