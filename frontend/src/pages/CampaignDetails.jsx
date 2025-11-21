@@ -146,8 +146,8 @@ Your contribution will directly impact these children's futures, giving them the
   };
 
   const handleDonate = () => {
-    // Navigate to donation page with amount pre-filled
-    navigate(`/campaigns/${id}/donate`, { state: { amount: donationAmount || undefined } });
+    // Navigate to checkout page with amount pre-filled
+    navigate(`/campaigns/${id}/checkout`, { state: { amount: donationAmount || undefined } });
   };
 
   const handleQuickAmount = (amount) => {

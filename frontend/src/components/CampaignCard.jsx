@@ -16,7 +16,7 @@ const CampaignCard = ({ campaign }) => {
 
   const handleDonateClick = (e) => {
     e.stopPropagation(); // Prevent card click
-    navigate(`/campaigns/${campaign.id}`, { state: { scrollToDonate: true } });
+    navigate(`/campaigns/${campaign.id}/checkout`);
   };
 
   return (
