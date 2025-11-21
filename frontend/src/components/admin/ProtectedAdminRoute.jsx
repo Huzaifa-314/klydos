@@ -1,18 +1,31 @@
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEffect, useState } from 'react';
-import { isAdminSessionValid, setupAdminActivityTracking, setupSessionExpirationWarning, clearAdminSession } from '../../utils/adminSession';
-import toast from 'react-hot-toast';
+import { isAdminSessionValid, clearAdminSession } from '../../utils/adminSession';
+
+// TEMPORARY: Admin security disabled - set to true to enable security
+const ADMIN_SECURITY_ENABLED = false;
 
 const ProtectedAdminRoute = ({ children }) => {
   const { loading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
+    // TEMPORARY: Bypass authentication if security is disabled
+    if (!ADMIN_SECURITY_ENABLED) {
+      setAdminAuthenticated(true);
+      setCheckingAdmin(false);
+      return;
+    }
+
     const checkAdminAuth = async () => {
+      // Wait for auth context to finish loading
+      if (loading) {
+        return;
+      }
+
       // Check if admin session is valid
       if (!isAdminSessionValid()) {
         setAdminAuthenticated(false);
@@ -36,37 +49,13 @@ const ProtectedAdminRoute = ({ children }) => {
       }
     };
 
-    if (!loading) {
-      checkAdminAuth();
-    }
+    checkAdminAuth();
   }, [loading]);
 
-  // Setup activity tracking
-  useEffect(() => {
-    if (adminAuthenticated) {
-      const cleanup = setupAdminActivityTracking();
-      return cleanup;
-    }
-  }, [adminAuthenticated]);
-
-  // Setup session expiration warning
-  useEffect(() => {
-    if (adminAuthenticated) {
-      const cleanup = setupSessionExpirationWarning(
-        (minutesRemaining) => {
-          toast.error(`Your admin session will expire in ${minutesRemaining} minutes. Please save your work.`, {
-            duration: 10000,
-          });
-        },
-        () => {
-          clearAdminSession();
-          toast.error('Your admin session has expired. Please log in again.');
-          navigate('/admin/login', { state: { from: location }, replace: true });
-        }
-      );
-      return cleanup;
-    }
-  }, [adminAuthenticated, navigate, location]);
+  // TEMPORARY: If security is disabled, immediately render children
+  if (!ADMIN_SECURITY_ENABLED) {
+    return children;
+  }
 
   // Show loading state
   if (loading || checkingAdmin) {
@@ -80,8 +69,8 @@ const ProtectedAdminRoute = ({ children }) => {
     );
   }
 
-  // Redirect to admin login if not authenticated
-  if (!adminAuthenticated) {
+  // Redirect to admin login if not authenticated (only if security is enabled)
+  if (ADMIN_SECURITY_ENABLED && !adminAuthenticated) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 

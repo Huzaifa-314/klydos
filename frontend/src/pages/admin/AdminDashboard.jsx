@@ -96,12 +96,6 @@ const AdminDashboard = () => {
           >
             ➕ Create Campaign
           </Link>
-          <button className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200">
-            ⏸️ Pause Campaign
-          </button>
-          <button className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all duration-200">
-            ↩️ Process Refund
-          </button>
         </div>
 
         {/* Metrics Cards */}
