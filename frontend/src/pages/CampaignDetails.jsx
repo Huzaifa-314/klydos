@@ -17,12 +17,13 @@ const CampaignDetails = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Mock data - replace with actual API call
+  // TODO: Replace with actual API call when Campaign Service is available
+  // API Endpoint (Future): GET /api/campaigns/:id
   useEffect(() => {
     setLoading(true);
     // Simulate API call
     setTimeout(() => {
-      // Mock campaign data - replace with actual API: GET /campaigns/{id}
+      // Mock campaign data - Replace with: api.campaigns.getById(id)
       const mockCampaign = {
         id: parseInt(id),
         title: 'Help Build a School in Rural Area',
@@ -78,7 +79,7 @@ Your contribution will directly impact these children's futures, giving them the
         ],
       };
 
-      // Mock related campaigns - replace with actual API: GET /campaigns?category={category}&limit=4
+      // Mock related campaigns - Replace with: api.campaigns.list({ category, limit: 4 })
       const mockRelated = [
         {
           id: 2,

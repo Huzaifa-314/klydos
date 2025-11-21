@@ -14,11 +14,15 @@ const Homepage = () => {
   const [recentDonations, setRecentDonations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with actual API calls
+  // TODO: Replace with actual API calls when Campaign Service is available
+  // API Endpoints (Future):
+  // - GET /api/campaigns - List all campaigns
+  // - GET /api/campaigns?featured=true - Get featured campaigns
+  // - GET /api/stats - Get platform statistics
   useEffect(() => {
     // Simulate API call
     setTimeout(() => {
-      // Mock campaigns data
+      // Mock campaigns data - Replace with: api.campaigns.list({ featured: true })
       const mockCampaigns = [
         {
           id: 1,

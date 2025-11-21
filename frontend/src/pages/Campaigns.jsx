@@ -9,11 +9,12 @@ const Campaigns = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Mock data - replace with actual API call: GET /campaigns
+  // TODO: Replace with actual API call when Campaign Service is available
+  // API Endpoint (Future): GET /api/campaigns
   useEffect(() => {
     setLoading(true);
     setTimeout(() => {
-      // Mock campaigns data - replace with actual API call
+      // Mock campaigns data - Replace with: api.campaigns.list(params)
       const mockCampaigns = [
         {
           id: 1,

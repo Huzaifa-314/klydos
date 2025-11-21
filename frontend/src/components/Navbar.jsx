@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  
-  // TODO: Replace with actual authentication state
-  const isAuthenticated = false;
-  const user = null; // { name: 'John Doe', email: 'john@example.com' }
 
   // Check if current path matches the link
   const isActive = (path) => {
@@ -139,8 +137,8 @@ const Navbar = () => {
                       <hr className="my-2 border-gray-200" />
                       <button
                         className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
-                        onClick={() => {
-                          // Handle logout
+                        onClick={async () => {
+                          await logout();
                           setIsUserMenuOpen(false);
                         }}
                       >
@@ -281,8 +279,8 @@ const Navbar = () => {
                 </Link>
                 <button
                   className="block w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium"
-                  onClick={() => {
-                    // Handle logout
+                  onClick={async () => {
+                    await logout();
                     setIsMenuOpen(false);
                   }}
                 >
