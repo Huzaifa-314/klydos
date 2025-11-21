@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -22,17 +23,23 @@ const Contact = () => {
     setIsSubmitting(true);
     setSubmitStatus(null);
 
-    // Simulate form submission - replace with actual API call
-    setTimeout(() => {
+    try {
+      // Simulate form submission - replace with actual API call
       // TODO: Replace with actual API call: POST /contact
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
       console.log('Form submitted:', formData);
       setIsSubmitting(false);
       setSubmitStatus('success');
       setFormData({ name: '', email: '', subject: '', message: '' });
+      toast.success('Message sent successfully! We\'ll get back to you soon.');
       
       // Reset status message after 5 seconds
       setTimeout(() => setSubmitStatus(null), 5000);
-    }, 1000);
+    } catch (error) {
+      setIsSubmitting(false);
+      toast.error('Failed to send message. Please try again.');
+    }
   };
 
   return (

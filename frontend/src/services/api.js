@@ -32,6 +32,18 @@ const getAuthHeaders = () => {
   };
 };
 
+// Get admin auth headers (includes API key)
+const getAdminAuthHeaders = async () => {
+  const { getAdminToken, getAdminApiKey } = await import('../utils/adminSession');
+  const adminToken = getAdminToken();
+  const adminApiKey = getAdminApiKey();
+  return {
+    'Content-Type': 'application/json',
+    ...(adminApiKey && { 'X-API-Key': adminApiKey }),
+    ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
+  };
+};
+
 // API Service
 export const api = {
   // User Service Endpoints
@@ -143,6 +155,323 @@ export const api = {
       // });
       // return handleResponse(response);
       throw new Error('Pledge service not yet available');
+    },
+  },
+
+  // Admin Service Endpoints
+  admin: {
+    // Admin Login (email + password + API key)
+    login: async (email, password, apiKey) => {
+      const response = await fetch(`${API_BASE_URL}/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await handleResponse(response);
+      // Store admin token if provided
+      if (data.token) {
+        const { setAdminSession } = await import('../utils/adminSession');
+        setAdminSession(data.token, apiKey, 60 * 60 * 1000); // 1 hour session
+      }
+      return data;
+    },
+
+    // Verify Admin Session
+    verifySession: async () => {
+      const { getAdminToken, getAdminApiKey } = await import('../utils/adminSession');
+      const adminToken = getAdminToken();
+      const adminApiKey = getAdminApiKey();
+      if (!adminToken || !adminApiKey) {
+        throw new Error('No admin session found');
+      }
+      const response = await fetch(`${API_BASE_URL}/admin/verify-session`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': adminApiKey,
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+      return handleResponse(response);
+    },
+
+    // Admin Logout
+    logout: async () => {
+      const { getAdminToken, getAdminApiKey, clearAdminSession } = await import('../utils/adminSession');
+      const adminToken = getAdminToken();
+      const adminApiKey = getAdminApiKey();
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(adminApiKey && { 'X-API-Key': adminApiKey }),
+            ...(adminToken && { Authorization: `Bearer ${adminToken}` }),
+          },
+        });
+        await handleResponse(response);
+      } catch (error) {
+        console.error('Admin logout error:', error);
+      } finally {
+        clearAdminSession();
+      }
+    },
+
+    // Get admin metrics
+    getMetrics: async () => {
+      const headers = await getAdminAuthHeaders();
+      const response = await fetch(`${API_BASE_URL}/admin/metrics`, {
+        method: 'GET',
+        headers,
+      });
+      return handleResponse(response);
+    },
+
+    // Campaign Management
+    getCampaigns: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/campaigns?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    createCampaign: async (campaignData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/campaigns`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(campaignData),
+      });
+      return handleResponse(response);
+    },
+
+    updateCampaign: async (id, campaignData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(campaignData),
+      });
+      return handleResponse(response);
+    },
+
+    updateCampaignStatus: async (id, status) => {
+      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}/status`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      return handleResponse(response);
+    },
+
+    uploadCampaignPhotos: async (id, photos) => {
+      const formData = new FormData();
+      photos.forEach((photo) => {
+        formData.append('photos', photo);
+      });
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/admin/campaigns/${id}/photos`, {
+        method: 'POST',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+      return handleResponse(response);
+    },
+
+    // Donations Management
+    getDonations: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/donations?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    processRefund: async (donationId, refundData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/donations/${donationId}/refund`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(refundData),
+      });
+      return handleResponse(response);
+    },
+
+    resendReceipt: async (donationId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/donations/${donationId}/receipt`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Users Management
+    getUsers: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/users?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    blockUser: async (userId, blocked) => {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/block`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ blocked }),
+      });
+      return handleResponse(response);
+    },
+
+    promoteToOrganizer: async (userId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/promote`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    resetPassword: async (userId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Webhooks
+    getWebhooks: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/webhooks?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    retryWebhook: async (webhookId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/webhooks/${webhookId}/retry`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Refunds
+    getRefunds: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/refunds?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    processRefund: async (refundId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/refunds/${refundId}/process`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Audit Logs
+    getAuditLogs: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/audit-logs?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Notifications
+    sendAnnouncement: async (announcementData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/notifications/announcement`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(announcementData),
+      });
+      return handleResponse(response);
+    },
+
+    // Settings
+    getSettings: async () => {
+      const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    updateSettings: async (settingsData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settingsData),
+      });
+      return handleResponse(response);
+    },
+
+    // Support Tickets
+    getSupportTickets: async (params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    replyToTicket: async (ticketId, replyData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/support-tickets/${ticketId}/reply`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(replyData),
+      });
+      return handleResponse(response);
+    },
+
+    // Reports
+    generateReport: async (reportType, params = {}) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`${API_BASE_URL}/admin/reports/${reportType}?${queryString}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    // Roles & Access
+    getAdmins: async () => {
+      const response = await fetch(`${API_BASE_URL}/admin/admins`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
+    },
+
+    addAdmin: async (adminData) => {
+      const response = await fetch(`${API_BASE_URL}/admin/admins`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(adminData),
+      });
+      return handleResponse(response);
+    },
+
+    removeAdmin: async (adminId) => {
+      const response = await fetch(`${API_BASE_URL}/admin/admins/${adminId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(response);
     },
   },
 };

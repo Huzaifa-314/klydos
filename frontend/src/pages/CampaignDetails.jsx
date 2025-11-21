@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import CampaignCard from '../components/CampaignCard';
 
 const CampaignDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [campaign, setCampaign] = useState(null);
   const [relatedCampaigns, setRelatedCampaigns] = useState([]);
   const [donationAmount, setDonationAmount] = useState('');
@@ -16,6 +18,15 @@ const CampaignDetails = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
+
+  // Show success toast if coming from checkout
+  useEffect(() => {
+    if (location.state?.donationSuccess) {
+      toast.success(`Thank you for your donation of $${location.state.amount?.toFixed(2) || '0.00'}!`);
+      // Clear the state to prevent showing toast on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   // TODO: Replace with actual API call when Campaign Service is available
   // API Endpoint (Future): GET /api/campaigns/:id
@@ -162,16 +173,19 @@ Your contribution will directly impact these children's futures, giving them the
     switch (platform) {
       case 'facebook':
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        toast.success('Opening Facebook...');
         break;
       case 'twitter':
         window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+        toast.success('Opening Twitter...');
         break;
       case 'whatsapp':
         window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, '_blank');
+        toast.success('Opening WhatsApp...');
         break;
       case 'copy':
         navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
+        toast.success('Link copied to clipboard!');
         break;
       default:
         break;
