@@ -1,0 +1,134 @@
+upstream user-service {
+    server user-service:8080;
+}
+
+# Future services - uncomment when services are implemented
+# upstream campaign-service {
+#     server campaign-service:8081;
+# }
+#
+# upstream pledge-service {
+#     server pledge-service:8082;
+# }
+#
+# upstream payment-service {
+#     server payment-service:8083;
+# }
+
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    # Redirect HTTP to HTTPS if SSL is enabled
+    # Uncomment when SSL is configured
+    # if ($scheme != "https") {
+    #     return 301 https://$host$request_uri;
+    # }
+
+    # Increase client body size for file uploads (campaign photos)
+    client_max_body_size 5M;
+
+    # CORS headers - configured for production domain
+    # For development, use '*' in ALLOWED_ORIGINS
+    add_header 'Access-Control-Allow-Origin' '${ALLOWED_ORIGINS}' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, PATCH, DELETE, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-API-Key' always;
+    add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+    # Handle preflight requests
+    if ($request_method = 'OPTIONS') {
+        return 204;
+    }
+
+    # Request logging
+    access_log /var/log/nginx/api-gateway-access.log;
+    error_log /var/log/nginx/api-gateway-error.log;
+
+    # Route to User Service
+    location /api/users {
+        rewrite ^/api/users/(.*) /users/$1 break;
+        proxy_pass http://user-service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Route to Campaign Service (future - uncomment when campaign-service is implemented)
+    # location /api/campaigns {
+    #     rewrite ^/api/campaigns/(.*) /campaigns/$1 break;
+    #     proxy_pass http://campaign-service;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    #     proxy_set_header X-Forwarded-Host $host;
+    # }
+
+    # Route to Pledge Service (future - for /campaigns/{id}/pledge endpoints)
+    # location ~ ^/api/campaigns/(.+)/pledge$ {
+    #     rewrite ^/api/campaigns/(.+)/pledge$ /campaigns/$1/pledge break;
+    #     proxy_pass http://pledge-service;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    # }
+
+    # Route to Payment Service (future - for webhooks)
+    # location /api/payments {
+    #     rewrite ^/api/payments/(.*) /payments/$1 break;
+    #     proxy_pass http://payment-service;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    # }
+
+    # Admin routes (future - can route to campaign-service or separate admin service)
+    # location /api/admin {
+    #     rewrite ^/api/admin/(.*) /admin/$1 break;
+    #     proxy_pass http://campaign-service;
+    #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    # }
+
+    # Health check endpoint for the gateway itself
+    location /health {
+        access_log off;
+        return 200 "API Gateway is healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Default route - return 404 for unknown paths
+    location / {
+        return 404 '{"error": "Route not found. Available routes: /api/users, /api/campaigns, /api/payments, /health"}';
+        add_header Content-Type application/json;
+    }
+}
+
+# SSL Configuration (uncomment and configure when SSL is set up)
+# server {
+#     listen 443 ssl http2;
+#     server_name ${SERVER_NAME};
+# 
+#     ssl_certificate /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
+# 
+#     # SSL configuration
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#     ssl_prefer_server_ciphers on;
+# 
+#     # Include the same location blocks as above
+#     # ... (copy all location blocks from server block above)
+# }
+
