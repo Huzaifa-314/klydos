@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/careforall/user-service/internal/config"
+	"github.com/Huzaifa-314/klydos/user-service/internal/config"
 	_ "github.com/lib/pq"
 )
 

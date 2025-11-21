@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/careforall/user-service/internal/config"
-	"github.com/careforall/user-service/internal/database"
-	"github.com/careforall/user-service/internal/handlers"
-	"github.com/careforall/user-service/internal/middleware"
+	"github.com/Huzaifa-314/klydos/user-service/internal/config"
+	"github.com/Huzaifa-314/klydos/user-service/internal/database"
+	"github.com/Huzaifa-314/klydos/user-service/internal/handlers"
+	"github.com/Huzaifa-314/klydos/user-service/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 

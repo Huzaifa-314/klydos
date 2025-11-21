@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/careforall/user-service/internal/models"
-	"github.com/careforall/user-service/internal/repository"
-	"github.com/careforall/user-service/internal/services"
+	"github.com/Huzaifa-314/klydos/user-service/internal/models"
+	"github.com/Huzaifa-314/klydos/user-service/internal/repository"
+	"github.com/Huzaifa-314/klydos/user-service/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

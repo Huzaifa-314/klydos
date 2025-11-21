@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/careforall/user-service/internal/repository"
+	"github.com/Huzaifa-314/klydos/user-service/internal/repository"
 )
 
 type UserService struct {

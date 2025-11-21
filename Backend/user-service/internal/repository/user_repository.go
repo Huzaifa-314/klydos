@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/careforall/user-service/internal/models"
+	"github.com/Huzaifa-314/klydos/user-service/internal/models"
 	"github.com/google/uuid"
 )
 

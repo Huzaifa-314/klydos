@@ -11,6 +11,7 @@ services:
       - ./api-gateway/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - user-service
+      - campaign-service
     networks:
       - app-network
     restart: unless-stopped
@@ -32,6 +33,25 @@ services:
     # Don't expose port externally - only accessible through API gateway
     # ports:
     #   - "8080:8080"
+
+  # Campaign Service
+  campaign-service:
+    build: ./campaign-service
+    container_name: campaign-service
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@campaigns_db:5432/campaigns?sslmode=disable
+      - PORT=8081
+      - USER_SERVICE_URL=http://user-service:8080
+      - ADMIN_API_KEY=admin-secret-key-123
+      - GIN_MODE=release
+    depends_on:
+      campaigns_db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - app-network
+    restart: unless-stopped
 
   # User Service Database
   users_db:
