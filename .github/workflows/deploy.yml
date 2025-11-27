@@ -23,7 +23,7 @@ jobs:
       # 3. Sync files using rsync (fast & deletes removed files)
       - name: Sync files to EC2
         run: |
-          rsync -avz --delete \
+          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" \
           --exclude=".git" \
           --exclude=".github" \
           --exclude="vendor" \
