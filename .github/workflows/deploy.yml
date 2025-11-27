@@ -43,20 +43,17 @@ jobs:
             cd ${{ secrets.APP_PATH }}
 
             # PHP dependencies
-            composer install --no-dev --optimize-autoloader
+            sudo composer install --no-dev --optimize-autoloader
 
             # Node dependencies & build
-            npm install
-            npm run build
-
-            # Ensure Laravel directories exist
-            mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache
+            sudo npm install
+            sudo npm run build
 
             # Laravel artisan tasks
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            sudo php artisan migrate --force
+            sudo php artisan config:cache
+            sudo php artisan route:cache
+            sudo php artisan view:cache
 
             # Restart PHP-FPM
             sudo systemctl restart php8.2-fpm
