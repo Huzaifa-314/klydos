@@ -3,7 +3,7 @@ name: Laravel CI/CD to EC2
 on:
   push:
     branches:
-      - main  # deploy on main branch push
+      - main
 
 jobs:
   deploy:
@@ -31,15 +31,30 @@ jobs:
           --exclude=".env" \
           ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_PATH }}
 
-      # 4. Install dependencies & migrate (run on EC2)
-      - name: Install dependencies & migrate
+      # 4. Install dependencies, build frontend & migrate (run on EC2)
+      - name: Install dependencies, build frontend & migrate
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             cd ${{ secrets.APP_PATH }}
+            
+            # PHP deps
             composer install --no-dev --optimize-autoloader
+            
+            # Node deps & build
+            npm install
+            npm run build
+            
+            # Laravel tasks
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-            sudo systemctl restart php8.2-fpm   # or restart your webserver
+            
+            # Fix permissions
+            sudo chown -R www-data:www-data storage bootstrap/cache database
+            sudo chmod -R 775 storage bootstrap/cache database
+            sudo chmod 664 database/database.sqlite
+            
+            # Restart PHP-FPM
+            sudo systemctl restart php8.2-fpm
           "
