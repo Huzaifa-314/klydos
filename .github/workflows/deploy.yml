@@ -29,6 +29,9 @@ jobs:
           --exclude="vendor" \
           --exclude="node_modules" \
           --exclude=".env" \
+          --exclude="storage" \
+          --exclude="bootstrap/cache" \
+          --exclude="database/database.sqlite" \
           ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_PATH }}
 
       # 4. Install dependencies, build frontend & migrate (run on EC2)
@@ -44,6 +47,9 @@ jobs:
             npm install
             npm run build
             
+            # Ensure directories exist
+            mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache
+            
             # Laravel tasks
             php artisan migrate --force
             php artisan config:cache
@@ -51,9 +57,12 @@ jobs:
             php artisan view:cache
             
             # Fix permissions
-            sudo chown -R www-data:www-data storage bootstrap/cache database
-            sudo chmod -R 775 storage bootstrap/cache database
-            sudo chmod 664 database/database.sqlite
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+            if [ -f database/database.sqlite ]; then
+              sudo chown www-data:www-data database/database.sqlite
+              sudo chmod 664 database/database.sqlite
+            fi
             
             # Restart PHP-FPM
             sudo systemctl restart php8.2-fpm
