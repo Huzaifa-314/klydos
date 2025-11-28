@@ -5,121 +5,59 @@ on:
     branches:
       - main
 
-env:
-  RSYNC_FLAGS: "-az --no-perms --no-owner --no-group --delete" # avoids trying to set owner/group/perms/times that caused rsync code 23
-  EXCLUDES: |
-    --exclude='.git'
-    --exclude='.github'
-    --exclude='vendor'
-    --exclude='node_modules'
-    --exclude='.env'
-    --exclude='storage'
-    --exclude='bootstrap/cache'
-    --exclude='database/database.sqlite'
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup SSH agent
+      # 2️⃣ Setup SSH
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      - name: Ensure remote path exists and is writable
+      # 3️⃣ Sync files to EC2 (SAFE — no sudo)
+      - name: Sync files to EC2
         run: |
-          REMOTE="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          SSH_OPTS="-o StrictHostKeyChecking=no"
-          ssh $SSH_OPTS $REMOTE "
-            sudo mkdir -p '${{ secrets.APP_PATH }}' || true
-            sudo chown -R ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} '${{ secrets.APP_PATH }}' || true
-            sudo chmod -R u+rwX '${{ secrets.APP_PATH }}' || true
-          "
-
-      - name: Rsync files to EC2
-        run: |
-          SSH_OPTS="-o StrictHostKeyChecking=no"
-          if [ -n "${{ secrets.EC2_PORT }}" ]; then
-            SSH_OPTS="$SSH_OPTS -p ${{ secrets.EC2_PORT }}"
-          fi
-
-          rsync $RSYNC_FLAGS \
-            $EXCLUDES \
-            -e "ssh $SSH_OPTS" \
+          rsync -avz \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='vendor' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='storage' \
+            --exclude='bootstrap/cache' \
+            --exclude='database/database.sqlite' \
+            -e "ssh -o StrictHostKeyChecking=no" \
             ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_PATH }}
 
+      # 4️⃣ Install dependencies & build on EC2
       - name: Deploy & Build on EC2
         run: |
-          SSH_OPTS="-o StrictHostKeyChecking=no"
-          if [ -n "${{ secrets.EC2_PORT }}" ]; then
-            SSH_OPTS="$SSH_OPTS -p ${{ secrets.EC2_PORT }}"
-          fi
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            cd ${{ secrets.APP_PATH }}
 
-          ssh $SSH_OPTS ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} bash -s <<'EOF'
-            set -euo pipefail
-            cd "${{ secrets.APP_PATH }}"
+            # PHP dependencies
+            composer install --no-dev --optimize-autoloader
 
-            # 1) PHP dependencies
-            if command -v composer >/dev/null 2>&1; then
-              composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+            # JS build
+            npm install
+            npm run build
+
+            # Laravel artisan tasks
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # Restart PHP-FPM or Apache (depends on your server)
+            if systemctl list-units --type=service | grep -q php8.2-fpm; then
+              sudo systemctl restart php8.2-fpm
+            else
+              sudo systemctl restart apache2
             fi
-
-            # 2) Node dependencies & build
-            if [ -f package.json ]; then
-              if command -v npm >/dev/null 2>&1; then
-                npm ci --silent
-                npm run build
-              fi
-            fi
-
-            # 3) Laravel artisan tasks
-            if [ -f artisan ]; then
-              php artisan migrate --force || true
-              php artisan config:cache || true
-              php artisan route:cache || true
-              php artisan view:cache || true
-            fi
-
-            # 4) Fix permissions for runtime files
-            if [ -d storage ] || [ -d bootstrap/cache ] || [ -f database/database.sqlite ]; then
-              sudo chown -R www-data:www-data storage bootstrap/cache || true
-              sudo chmod -R 775 storage bootstrap/cache || true
-              if [ -f database/database.sqlite ]; then
-                sudo chown www-data:www-data database/database.sqlite || true
-                sudo chmod 664 database/database.sqlite || true
-              fi
-            fi
-
-            # 5) Restart PHP-FPM or Apache
-            if command -v systemctl >/dev/null 2>&1; then
-              if systemctl list-units --type=service | grep -q 'php.*fpm'; then
-                if systemctl list-units --type=service | grep -q php8.2-fpm; then
-                  sudo systemctl restart php8.2-fpm || true
-                else
-                  for svc in php*-fpm; do
-                    sudo systemctl restart "$svc" || true
-                  done
-                fi
-              else
-                sudo systemctl restart apache2 || true
-              fi
-            fi
-
-            # 6) Ensure deployment path ownership is correct
-            sudo chown -R $USER:$USER "${{ secrets.APP_PATH }}" || true
-
-            echo "Deployment completed"
-          EOF
-
-      - name: Post-deploy health check (optional)
-        run: |
-          if [ -n "${{ secrets.APP_URL }}" ]; then
-            echo "Checking ${{ secrets.APP_URL }}"
-            curl -fsS "${{ secrets.APP_URL }}" || echo "Health check failed (non-blocking)"
-          else
-            echo "No APP_URL provided, skipping health check"
-          fi
+          "
