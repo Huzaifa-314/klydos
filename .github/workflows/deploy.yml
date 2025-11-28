@@ -20,10 +20,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️⃣ Sync files to EC2 (SAFE — no sudo)
+      # 3️⃣ Sync files to EC2
+      # Added flags: --no-o (no owner), --no-g (no group), --omit-dir-times (ignore folder times)
       - name: Sync files to EC2
         run: |
-          rsync -avz \
+          rsync -avz --no-o --no-g --omit-dir-times \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='vendor' \
@@ -48,13 +49,23 @@ jobs:
             npm install
             npm run build
 
+            # 🔴 PRE-FIX: Ensure 'ubuntu' can write to cache during deployment
+            # If the previous deploy set this to www-data, we need to take it back temporarily
+            sudo chown -R \$USER:www-data bootstrap/cache
+
             # Laravel artisan tasks
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
 
-            # Restart PHP-FPM or Apache (depends on your server)
+            # 🟢 POST-FIX: Permission Fix for Web Server (Critical)
+            # Give ownership of storage, cache AND database (for SQLite) to www-data
+            sudo chown -R www-data:www-data storage bootstrap/cache database
+            sudo chmod -R 775 storage bootstrap/cache database
+
+            # Restart PHP-FPM or Apache
+            # We check for php8.2-fpm; adjust version if you use 8.1 or 8.3
             if systemctl list-units --type=service | grep -q php8.2-fpm; then
               sudo systemctl restart php8.2-fpm
             else
