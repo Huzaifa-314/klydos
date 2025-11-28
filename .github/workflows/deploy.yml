@@ -21,10 +21,14 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
       # 3️⃣ Sync files to EC2
-      # Added flags: --no-o (no owner), --no-g (no group), --omit-dir-times (ignore folder times)
+      # Added flags:
+      # --no-o (no owner): Don't try to set user ownership
+      # --no-g (no group): Don't try to set group ownership
+      # --no-p (no perms): Don't try to set permissions (chmod) - FIXES "Operation not permitted"
+      # --omit-dir-times: Don't try to set folder modification times
       - name: Sync files to EC2
         run: |
-          rsync -avz --no-o --no-g --omit-dir-times \
+          rsync -avz --no-o --no-g --no-p --omit-dir-times \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='vendor' \
