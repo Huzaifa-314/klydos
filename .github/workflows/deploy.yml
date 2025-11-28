@@ -31,7 +31,7 @@ jobs:
             --exclude='.env' \
             --exclude='storage' \
             --exclude='bootstrap/cache' \
-            --exclude='database/database.sqlite' \
+            --exclude='database' \
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_PATH }}
 
