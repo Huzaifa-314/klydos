@@ -141,7 +141,7 @@
 
     <div class="container">
         <div class="content">
-            <h1>Klydos</h1>
+            <h1>Klydos_</h1>
             <p class="subtitle">AI-powered testing. No scripts. No hassle. Just results.</p>
 
             <div class="section">
