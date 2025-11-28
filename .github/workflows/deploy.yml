@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup SSH
+      # 2️⃣ Setup SSH agent
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.EC2_KEY }}
 
-      # 3️⃣ Sync files to EC2 (SAFE — no sudo)
+      # 3️⃣ Rsync files to EC2 (exclude runtime & sensitive folders)
       - name: Sync files to EC2
         run: |
           rsync -avz \
@@ -31,30 +31,35 @@ jobs:
             --exclude='.env' \
             --exclude='storage' \
             --exclude='bootstrap/cache' \
-            --exclude='database' \
+            --exclude='database/database.sqlite' \
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.APP_PATH }}
 
-      # 4️⃣ Install dependencies & build on EC2
+      # 4️⃣ Deploy on EC2: install dependencies, build assets, run artisan
       - name: Deploy & Build on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
             cd ${{ secrets.APP_PATH }}
 
-            # PHP dependencies
+            # 4a. PHP dependencies
             composer install --no-dev --optimize-autoloader
 
-            # JS build
+            # 4b. Node.js dependencies & build
             npm install
             npm run build
 
-            # Laravel artisan tasks
+            # 4c. Laravel artisan tasks
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
 
-            # Restart PHP-FPM or Apache (depends on your server)
+            # 4d. Fix permissions so www-data can write to runtime folders
+            sudo chown -R www-data:www-data storage bootstrap/cache database/database.sqlite
+            sudo chmod -R 775 storage bootstrap/cache
+            sudo chmod 664 database/database.sqlite
+
+            # 4e. Restart PHP-FPM or Apache
             if systemctl list-units --type=service | grep -q php8.2-fpm; then
               sudo systemctl restart php8.2-fpm
             else
